@@ -31,7 +31,16 @@ function Login({ setUserRole }) {
       }
     } catch (error) {
       console.error('Error logging in:', error);
-      setError('Wrong login or password');
+      if (error.response) {
+        // Server responded with an error
+        setError(error.response.data.message || 'Login failed');
+      } else if (error.request) {
+        // Request was made but no response
+        setError('Unable to connect to server');
+      } else {
+        // Other errors
+        setError('An error occurred during login');
+      }
     }
   };
 
