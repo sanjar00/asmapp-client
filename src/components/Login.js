@@ -12,11 +12,22 @@ function Login({ setUserRole }) {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError(''); // Clear previous errors
+    
     try {
-      const response = await api.post('/auth/login', { username, password });
+      console.log('Attempting login with:', { username }); // Don't log password
+      const response = await api.post('/auth/login', { 
+        username: username.trim(), // Trim whitespace
+        password: password
+      });
+      
       const { token } = response.data;
-      localStorage.setItem('token', token);
+      if (!token) {
+        setError('Invalid response from server - no token received');
+        return;
+      }
 
+      localStorage.setItem('token', token);
       const payload = JSON.parse(atob(token.split('.')[1]));
       setUserRole(payload.role);
 
@@ -30,16 +41,18 @@ function Login({ setUserRole }) {
         navigate('/');
       }
     } catch (error) {
-      console.error('Error logging in:', error);
-      if (error.response) {
-        // Server responded with an error
-        setError(error.response.data.message || 'Login failed');
-      } else if (error.request) {
-        // Request was made but no response
-        setError('Unable to connect to server');
+      console.error('Login error details:', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        error: error.message
+      });
+
+      if (error.response?.status === 401) {
+        setError('Invalid username or password');
+      } else if (!error.response) {
+        setError('Unable to connect to server. Please try again later.');
       } else {
-        // Other errors
-        setError('An error occurred during login');
+        setError(error.response?.data?.message || 'An error occurred during login');
       }
     }
   };

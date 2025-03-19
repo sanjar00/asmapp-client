@@ -8,9 +8,23 @@ const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json'
   },
   withCredentials: false // Set to false since we're using token-based auth
 });
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      config: error.config
+    });
+    return Promise.reject(error);
+  }
+);
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
