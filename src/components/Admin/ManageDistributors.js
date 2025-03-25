@@ -78,29 +78,30 @@ function ManageDistributors() {
     }
   };
 
-  // Add the missing handleUpdateQuantities function
+  // Find the handleUpdateQuantities function and update it
   const handleUpdateQuantities = async () => {
     if (!excelFile) {
       alert('Please select an Excel file first');
       return;
     }
-
+  
     try {
       const formData = new FormData();
       formData.append('file', excelFile);
-
-      await api.post('/admin/distributors/update-quantities', formData, {
+  
+      // Use the correct endpoint
+      await api.post('/admin/distributors/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-
+  
       alert('Quantities updated successfully');
       fetchDistributors(); // Refresh the list
       setExcelFile(null); // Reset the file input
     } catch (error) {
       console.error('Error updating quantities:', error);
-      alert('Error updating quantities from Excel');
+      alert('Failed to update quantities. Please check the console for details.');
     }
   };
 
@@ -399,32 +400,6 @@ function ManageDistributors() {
           </TableBody>
         </Table>
       </TableContainer>
-      
-      {/* Remove this duplicate section */}
-      {/* 
-      <Box sx={{ mb: 2 }}>
-        <input
-          type="file"
-          accept=".xlsx,.xls"
-          style={{ display: 'none' }}
-          id="upload-excel"
-          onChange={handleFileChange}
-        />
-        <label htmlFor="upload-excel">
-          <Button variant="outlined" component="span" sx={{ mr: 2 }}>
-            Upload file
-          </Button>
-        </label>
-        <Button
-          variant="contained"
-          color="primary"
-          disabled={!excelFile}
-          onClick={handleUpdateQuantities}
-        >
-          Update the quantities
-        </Button>
-      </Box>
-      */}
     </div>
   );
 }
