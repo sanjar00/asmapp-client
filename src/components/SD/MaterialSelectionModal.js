@@ -48,7 +48,7 @@ const MaterialSelectionModal = ({
     if (distributorId) {
       fetchDistributorDetails();
     }
-  }, [materials, distributorId]);
+  }, [materials, distributorId, fetchDistributorDetails]);
 
   // Fetch distributor details to get isHistorical status
   const fetchDistributorDetails = async () => {
