@@ -35,6 +35,7 @@ const MaterialSelectionModal = ({
   const [editingMaterialId, setEditingMaterialId] = useState(null);
   const [newQuantity, setNewQuantity] = useState('');
   const [errorText, setErrorText] = useState('');
+  const [distributor, setDistributor] = useState(null);
 
   // 0 = All, 1 = TT, 2 = OP
   const [selectedChannel, setSelectedChannel] = useState(0);
@@ -42,7 +43,22 @@ const MaterialSelectionModal = ({
   useEffect(() => {
     setSelectedMaterials([]);
     setSelectedChannel(0);
-  }, [materials]);
+    
+    // Get distributor details to check if it's historical
+    if (distributorId) {
+      fetchDistributorDetails();
+    }
+  }, [materials, distributorId]);
+
+  // Fetch distributor details to get isHistorical status
+  const fetchDistributorDetails = async () => {
+    try {
+      const response = await api.get(`/sd/distributor/${distributorId}`);
+      setDistributor(response.data);
+    } catch (error) {
+      console.error('Error fetching distributor details:', error);
+    }
+  };
 
   const handleToggle = (materialId) => {
     setSelectedMaterials((prev) =>
@@ -155,12 +171,27 @@ const MaterialSelectionModal = ({
     setSelectedMaterials([]);
   };
 
-  // *** Filter out accessories => only main items have parentId == null
+  // *** Filter materials based on historical status and channel
   const filteredMaterials = materials.filter((mat) => {
+    // Skip accessories
     if (mat.parentId !== null && mat.parentId !== undefined) {
-      return false; // skip accessories
+      return false;
     }
-    // then apply channel filter
+    
+    // Check historical status match
+    if (distributor && distributor.isHistorical !== undefined) {
+      // If distributor is historical, only show historical materials
+      if (distributor.isHistorical && !mat.isHistorical) {
+        return false;
+      }
+      
+      // If distributor is not historical, don't show historical materials
+      if (!distributor.isHistorical && mat.isHistorical) {
+        return false;
+      }
+    }
+    
+    // Apply channel filter
     if (selectedChannel === 1) return mat.channel === 'TT';
     if (selectedChannel === 2) return mat.channel === 'OP';
     return true; // 0 => All
@@ -185,6 +216,11 @@ const MaterialSelectionModal = ({
       >
         <Typography variant="h6" component="h2" gutterBottom>
           Select Materials for {materials[0]?.Distributors?.name || 'Distributor'}
+          {distributor?.isHistorical && (
+            <Typography variant="subtitle2" color="secondary">
+              (Historical Distributor)
+            </Typography>
+          )}
         </Typography>
 
         {/* Close Button */}
@@ -253,7 +289,7 @@ const MaterialSelectionModal = ({
                         />
                       </ListItemIcon>
                       <ListItemText
-                        primary={`${material.name} (Code: ${material.code})`}
+                        primary={`${material.name} (Code: ${material.code})${material.isHistorical ? ' - Historical' : ''}`}
                         secondary={`Channel: ${material.channel} | Currently distributed: ${distQty}`}
                       />
                       {!isLocked && !isEditing && (
