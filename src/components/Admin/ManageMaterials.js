@@ -53,6 +53,9 @@ function ManageMaterials() {
 
   // For expand/collapse in the table
   const [expandedRows, setExpandedRows] = useState({});
+  
+  // Add a ref for scrolling to the form
+  const formRef = useRef(null);
 
   useEffect(() => {
     fetchAllMaterials();
@@ -215,6 +218,11 @@ function ManageMaterials() {
       }));
       setAccessories(arr);
     }
+    
+    // Scroll to form if needed
+    if (formRef && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   // Save updates to an existing main item
@@ -309,7 +317,7 @@ function ManageMaterials() {
       </Box>
 
       {/* FORM: Add or Edit */}
-      <Box>
+      <Box ref={formRef}>
         <Typography variant="h5" gutterBottom>
           {editingMain ? 'Edit Material' : 'Add Material'}
         </Typography>
@@ -586,17 +594,18 @@ function ManageMaterials() {
 
 export default ManageMaterials;
 
-const handleEditMaterial = (mainItem) => {
-  setEditingMain(mainItem);
-  setMainName(mainItem.name);
-  setMainCode(mainItem.code);
-  setMainChannel(mainItem.channel);
-  setMainQuantity(mainItem.quantity);
-  setIsHistorical(mainItem.isHistorical || false); // Set historical value
-  setMaterialType('single');
-  
-  // Scroll to form
-  if (formRef && formRef.current) {
-    formRef.current.scrollIntoView({ behavior: 'smooth' });
-  }
-};
+// REMOVE THIS FUNCTION - it's defined outside the component scope
+// const handleEditMaterial = (mainItem) => {
+//   setEditingMain(mainItem);
+//   setMainName(mainItem.name);
+//   setMainCode(mainItem.code);
+//   setMainChannel(mainItem.channel);
+//   setMainQuantity(mainItem.quantity);
+//   setIsHistorical(mainItem.isHistorical || false); // Set historical value
+//   setMaterialType('single');
+//   
+//   // Scroll to form
+//   if (formRef && formRef.current) {
+//     formRef.current.scrollIntoView({ behavior: 'smooth' });
+//   }
+// };
