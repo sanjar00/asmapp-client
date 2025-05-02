@@ -1,6 +1,6 @@
 // components/Admin/ManageMaterials.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import {
   Typography,
@@ -586,15 +586,17 @@ function ManageMaterials() {
 
 export default ManageMaterials;
 
-const handleEditMaterial = (material) => {
-  setEditingMain(material);
-  setMainName(material.name);
-  setMainCode(material.code);
-  setMainChannel(material.channel);
-  setMainQuantity(material.quantity);
-  setIsHistorical(material.isHistorical || false); // Set the historical status
-  setMaterialType('single'); // Assume single for editing
+const handleEditMaterial = (mainItem) => {
+  setEditingMain(mainItem);
+  setMainName(mainItem.name);
+  setMainCode(mainItem.code);
+  setMainChannel(mainItem.channel);
+  setMainQuantity(mainItem.quantity);
+  setIsHistorical(mainItem.isHistorical || false); // Set historical value
+  setMaterialType('single');
   
   // Scroll to form
-  formRef.current.scrollIntoView({ behavior: 'smooth' });
+  if (formRef && formRef.current) {
+    formRef.current.scrollIntoView({ behavior: 'smooth' });
+  }
 };
