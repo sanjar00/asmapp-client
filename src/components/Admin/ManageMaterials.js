@@ -160,8 +160,8 @@ function ManageMaterials() {
           name: mainName,
           code: mainCode,
           channel: mainChannel,
-          quantity: mainQuantity,
-          isHistorical: isHistorical
+          quantity: parseInt(mainQuantity, 10),
+          isHistorical: isHistorical, // Include isHistorical flag
         });
       } else {
         // extra
@@ -171,10 +171,15 @@ function ManageMaterials() {
             name: mainName,
             code: mainCode,
             channel: mainChannel,
-            quantity: mainQuantity,
-            isHistorical: isHistorical
+            quantity: parseInt(mainQuantity, 10),
+            isHistorical: isHistorical, // Include isHistorical flag
           },
-          accessories,
+          accessories: accessories.map(acc => ({
+            name: acc.name,
+            code: acc.code,
+            channel: acc.channel,
+            quantity: parseInt(acc.quantity, 10),
+          })),
         });
       }
       await fetchAllMaterials();
@@ -365,15 +370,16 @@ function ManageMaterials() {
         />
 
         {/* Historical checkbox */}
+        // In the form for creating/editing materials
         <FormControlLabel
           control={
             <Checkbox
               checked={isHistorical}
               onChange={(e) => setIsHistorical(e.target.checked)}
+              name="isHistorical"
             />
           }
           label="Historical Material"
-          sx={{ mt: 2 }}
         />
 
         {/* Accessories section (only if type=extra) */}
@@ -579,3 +585,16 @@ function ManageMaterials() {
 }
 
 export default ManageMaterials;
+
+const handleEditMaterial = (material) => {
+  setEditingMain(material);
+  setMainName(material.name);
+  setMainCode(material.code);
+  setMainChannel(material.channel);
+  setMainQuantity(material.quantity);
+  setIsHistorical(material.isHistorical || false); // Set the historical status
+  setMaterialType('single'); // Assume single for editing
+  
+  // Scroll to form
+  formRef.current.scrollIntoView({ behavior: 'smooth' });
+};
