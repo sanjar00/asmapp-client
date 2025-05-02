@@ -195,10 +195,6 @@ const MaterialSelectionModal = ({
           <Close />
         </IconButton>
 
-        <Typography variant="h6" gutterBottom>
-          Select Materials
-        </Typography>
-
         {/* Channel Tabs */}
         <Tabs
           value={selectedChannel}
