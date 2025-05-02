@@ -1,6 +1,6 @@
 // components/SD/MaterialSelectionModal.js
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Modal,
   Box,
@@ -40,6 +40,16 @@ const MaterialSelectionModal = ({
   // 0 = All, 1 = TT, 2 = OP
   const [selectedChannel, setSelectedChannel] = useState(0);
 
+  // Memoize the fetchDistributorDetails function with useCallback
+  const fetchDistributorDetails = useCallback(async () => {
+    try {
+      const response = await api.get(`/sd/distributor/${distributorId}`);
+      setDistributor(response.data);
+    } catch (error) {
+      console.error('Error fetching distributor details:', error);
+    }
+  }, [distributorId]);
+
   useEffect(() => {
     setSelectedMaterials([]);
     setSelectedChannel(0);
@@ -49,16 +59,6 @@ const MaterialSelectionModal = ({
       fetchDistributorDetails();
     }
   }, [materials, distributorId, fetchDistributorDetails]);
-
-  // Fetch distributor details to get isHistorical status
-  const fetchDistributorDetails = async () => {
-    try {
-      const response = await api.get(`/sd/distributor/${distributorId}`);
-      setDistributor(response.data);
-    } catch (error) {
-      console.error('Error fetching distributor details:', error);
-    }
-  };
 
   const handleToggle = (materialId) => {
     setSelectedMaterials((prev) =>
