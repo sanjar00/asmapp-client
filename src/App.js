@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CssBaseline, Container } from '@mui/material';
 import Login from './components/Login';
 import AdminDashboard from './components/Admin/AdminDashboard';
