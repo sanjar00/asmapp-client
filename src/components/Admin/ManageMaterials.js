@@ -378,7 +378,6 @@ function ManageMaterials() {
         />
 
         {/* Historical checkbox */}
-        // In the form for creating/editing materials
         <FormControlLabel
           control={
             <Checkbox

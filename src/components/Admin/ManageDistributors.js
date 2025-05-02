@@ -105,21 +105,6 @@ function ManageDistributors() {
     }
   };
 
-  // Add the missing editDistributor function
-  const editDistributor = (id) => {
-    const distributor = distributors.find(dist => dist.id === id);
-    if (distributor) {
-      setName(distributor.name);
-      setCode(distributor.code);
-      setSdId(distributor.sdId);
-      setRegionId(distributor.regionId);
-      setPointsOP(distributor.points_OP || '');
-      setPointsTT(distributor.points_TT || '');
-      setIsHistorical(distributor.isHistorical || false);
-      setEditingDistributorId(distributor.id);
-    }
-  };
-
   // Add the missing deleteDistributor function
   const deleteDistributor = async (id) => {
     if (window.confirm('Are you sure you want to delete this distributor?')) {
@@ -148,80 +133,78 @@ function ManageDistributors() {
   };
 
   // Modify the addDistributor function
+  // This function needs to include isHistorical in the request
   const addDistributor = async () => {
-    if (!name || !code || !sdId || !regionId) {
-      alert('Please fill in all required fields');
+    if (!name || !sdId || !regionId || !points_OP || !points_TT) {
+      alert('Please fill in all fields');
       return;
     }
-
     try {
-      const response = await api.post('/admin/distributors', {
+      await api.post('/admin/distributors', {
         name,
         code,
         sdId,
         regionId,
         points_OP,
         points_TT,
-        isHistorical  // Add this field
+        isHistorical // Add this line to include the historical flag
       });
-
-      setDistributors([...distributors, response.data]);
-      // Reset form
+      fetchDistributors();
       setName('');
       setCode('');
       setSdId('');
       setRegionId('');
       setPointsOP('');
       setPointsTT('');
-      setIsHistorical(false);  // Reset historical checkbox
+      setIsHistorical(false); // Reset the historical flag
     } catch (error) {
-      console.error('Error adding distributor:', error);
-      alert('Error adding distributor');
+      console.error('Error while adding distributor:', error);
     }
   };
 
-  // Modify the updateDistributor function
-  const updateDistributor = async (id) => {
+  // This function also needs to include isHistorical
+  const updateDistributor = async () => {
+    if (!name || !sdId || !regionId || !points_OP || !points_TT) {
+      alert('Please fill in all fields');
+      return;
+    }
     try {
-      await api.put(`/admin/distributors/${id}`, {
+      await api.put(`/admin/distributors/${editingDistributorId}`, {
         name,
         code,
         sdId,
         regionId,
         points_OP,
         points_TT,
-        isHistorical  // Add this field
+        isHistorical // Add this line to include the historical flag
       });
-
-      // Update local state
-      const updatedDistributors = distributors.map((dist) =>
-        dist.id === id
-          ? {
-              ...dist,
-              name,
-              code,
-              sdId,
-              regionId,
-              points_OP,
-              points_TT,
-              isHistorical
-            }
-          : dist
-      );
-
-      setDistributors(updatedDistributors);
-      setEditingDistributorId(null);
-      // Reset form
+      fetchDistributors();
       setName('');
       setCode('');
       setSdId('');
       setRegionId('');
       setPointsOP('');
       setPointsTT('');
-      setIsHistorical(false);
+      setIsHistorical(false); // Reset the historical flag
+      setEditingDistributorId(null);
     } catch (error) {
-      console.error('Error updating distributor:', error);
-      alert('Error updating distributor');
+      console.error('Error while updating distributor:', error);
+    }
+  };
+
+  // When editing a distributor, we need to set the isHistorical value
+  // Keep only this editDistributor function
+  const editDistributor = (distributorId) => {
+    const distributor = distributors.find((d) => d.id === distributorId);
+    if (distributor) {
+      setEditingDistributorId(distributorId);
+      setName(distributor.name);
+      setCode(distributor.code || '');
+      setSdId(distributor.sdId);
+      setRegionId(distributor.regionId);
+      setPointsOP(distributor.points_OP);
+      setPointsTT(distributor.points_TT);
+      setIsHistorical(distributor.isHistorical || false); // Set the historical value
     }
   };
 
@@ -301,8 +284,7 @@ function ManageDistributors() {
               onChange={(e) => setIsHistorical(e.target.checked)}
             />
           }
-          label="Historical Distributor"
-          sx={{ mt: 2, display: 'block' }}
+          label="Historical (archived)"
         />
         
         {editingDistributorId ? (
