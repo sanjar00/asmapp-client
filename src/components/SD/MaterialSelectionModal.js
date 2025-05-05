@@ -139,31 +139,24 @@ const MaterialSelectionModal = ({
       return;
     }
 
-    // In your saveQuantity function or similar in MaterialSelectionModal.js
-    
-    const saveQuantity = async (materialId, newQuantity) => {
-      try {
-        await api.patch('/sd/distribute', {
-          distributorId: selectedDistributor.id,
-          materialId: materialId,
-          newQuantity: parseInt(newQuantity, 10)
-        });
-        
-        // Update local state or refresh data as needed
-        fetchDistributors();
-        setEditMode(false);
-        
-      } catch (error) {
-        console.error('Error saving quantity:', error);
-        
-        // Show a more user-friendly error message
-        const errorMessage = error.response?.data?.message || 
-          'Failed to update quantity. Please try again.';
-        
-        // Display the error message to the user (using alert for simplicity)
-        alert(errorMessage);
-      }
-    };
+    try {
+      await api.patch('/sd/distribute', {
+        distributorId,
+        materialId: material.id,
+        newQuantity: intValue,
+      });
+
+      // local UI update
+      material.MaterialDistribution.distributedQuantity = intValue;
+      refreshDistributors();
+
+      setEditingMaterialId(null);
+      setNewQuantity('');
+      setErrorText('');
+    } catch (error) {
+      console.error('Error saving quantity:', error.response?.data || error);
+      setErrorText(error.response?.data?.message || 'Error saving quantity.');
+    }
   };
 
   const handleSubmit = () => {
