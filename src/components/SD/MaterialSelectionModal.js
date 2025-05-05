@@ -139,24 +139,26 @@ const MaterialSelectionModal = ({
       return;
     }
 
-    try {
-      await api.patch('/sd/distribute', {
-        distributorId,
-        materialId: material.id,
-        newQuantity: intValue,
-      });
-
-      // local UI update
-      material.MaterialDistribution.distributedQuantity = intValue;
-      refreshDistributors();
-
-      setEditingMaterialId(null);
-      setNewQuantity('');
-      setErrorText('');
-    } catch (error) {
-      console.error('Error saving quantity:', error.response?.data || error);
-      setErrorText(error.response?.data?.message || 'Error saving quantity.');
-    }
+    // This function needs to be updated to handle the error response
+    const saveQuantity = async (materialId, quantity) => {
+      try {
+        setErrorText('');
+        await api.patch('/sd/distribute', {
+          distributorId,
+          materialId,
+          newQuantity: parseInt(quantity, 10)
+        });
+        
+        refreshDistributors();
+        setEditingMaterialId(null);
+      } catch (error) {
+        console.error('Error saving quantity:', error);
+        // Display the specific error message from the backend
+        const errorMessage = error.response?.data?.message || 
+          'Failed to update quantity. Please try again.';
+        setErrorText(errorMessage);
+      }
+    };
   };
 
   const handleSubmit = () => {
@@ -324,8 +326,9 @@ const MaterialSelectionModal = ({
                           </IconButton>
                         </Box>
   
+                        // Inside the modal content, make sure there's an Alert component to show errors
                         {errorText && (
-                          <Alert severity="error" sx={{ mt: 1 }}>
+                          <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
                             {errorText}
                           </Alert>
                         )}
