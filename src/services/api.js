@@ -34,6 +34,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Add an interceptor to handle CORS issues
+api.interceptors.request.use(
+  config => {
+    // For distribution updates, convert PATCH to PUT
+    if (config.method === 'patch' && config.url.includes('/sd/distribute')) {
+      config.method = 'put';
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  }
+);
+
 // Method for locking materials
 api.lockMaterials = async (materials) => {
   return api.post('/requests/lock-materials', { materials });
