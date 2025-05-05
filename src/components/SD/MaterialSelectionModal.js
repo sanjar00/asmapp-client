@@ -323,7 +323,7 @@ const MaterialSelectionModal = ({
                           </IconButton>
                         </Box>
   
-                        // Display error message if any
+                        {/* Display error message if any */}
                         {errorText && (
                           <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
                             {errorText}
