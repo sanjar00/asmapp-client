@@ -48,7 +48,7 @@ const MaterialSelectionModal = ({
     if (distributorId) {
       fetchDistributorDetails();
     }
-  }, [materials, distributorId, fetchDistributorDetails]);
+  }, [materials, distributorId]); // Remove fetchDistributorDetails from the dependency array
 
   // Fetch distributor details to get isHistorical status
   const fetchDistributorDetails = async () => {
@@ -322,8 +322,7 @@ const MaterialSelectionModal = ({
                             <Close />
                           </IconButton>
                         </Box>
-  
-                        {/* Display error message if any */}
+                        
                         {errorText && (
                           <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
                             {errorText}
