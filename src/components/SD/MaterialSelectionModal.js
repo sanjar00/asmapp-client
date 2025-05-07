@@ -147,7 +147,25 @@ const MaterialSelectionModal = ({
         newQuantity: intValue
       });
       
-      refreshDistributors();
+      // Update the material in the local state to reflect changes immediately
+      const updatedMaterials = materials.map(mat => {
+        if (mat.id === material.id) {
+          return {
+            ...mat,
+            MaterialDistribution: {
+              ...mat.MaterialDistribution,
+              distributedQuantity: intValue
+            }
+          };
+        }
+        return mat;
+      });
+      
+      // Update the parent component with the new materials array
+      if (typeof refreshDistributors === 'function') {
+        refreshDistributors();
+      }
+      
       setEditingMaterialId(null);
     } catch (error) {
       console.error('Error saving quantity:', error);

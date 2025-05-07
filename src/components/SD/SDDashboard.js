@@ -29,7 +29,13 @@ function SDDashboard() {
   const fetchDistributors = async () => {
     try {
       const response = await api.get('/sd/distributors');
-      setDistributors(response.data);
+      // Sort distributors by ID or name to maintain consistent order
+      const sortedDistributors = response.data.sort((a, b) => {
+        // Sort by ID (numeric) or by name (alphabetical) if you prefer
+        return a.id - b.id; // For numeric ID sorting
+        // Or use: return a.name.localeCompare(b.name); // For alphabetical name sorting
+      });
+      setDistributors(sortedDistributors);
     } catch (error) {
       console.error('Error while getting distributors:', error);
     }
