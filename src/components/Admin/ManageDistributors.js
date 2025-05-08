@@ -413,21 +413,21 @@ function ManageDistributors() {
       </TableContainer>
     </div>
   );
-}
 
-export default ManageDistributors;
-
-// Move handleFilterChange inside the component
+// Add handleFilterChange inside the component
 const handleFilterChange = (event, newFilterStatus) => {
   if (newFilterStatus !== null) {
     setFilterStatus(newFilterStatus);
   }
 };
 
-// Filter distributors based on status - move inside component
+// Add filteredDistributors inside the component
 const filteredDistributors = distributors.filter(distributor => {
   if (filterStatus === 'all') return true;
   if (filterStatus === 'historical' && distributor.isHistorical) return true;
   if (filterStatus === 'active' && !distributor.isHistorical) return true;
   return false;
 });
+}
+
+export default ManageDistributors;
