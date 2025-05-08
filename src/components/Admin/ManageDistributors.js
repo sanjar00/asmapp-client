@@ -17,7 +17,10 @@ import {
   Paper,
   Box,
   OutlinedInput,
-  FormControlLabel, Checkbox  // Add this import
+  FormControlLabel, 
+  Checkbox,
+  ToggleButtonGroup,
+  ToggleButton
 } from '@mui/material';
 
 function ManageDistributors() {
@@ -69,6 +72,7 @@ function ManageDistributors() {
   };
 
   const [isHistorical, setIsHistorical] = useState(false);  // Add this state
+  const [filterStatus, setFilterStatus] = useState('all'); // Add this state
 
   // Add the missing handleFileChange function
   const handleFileChange = (event) => {
@@ -212,6 +216,7 @@ function ManageDistributors() {
   // Fix the JSX structure by wrapping everything in a single parent div
   return (
     <div>
+      {/* Form for adding or editing distributor */}
       <Box component="form">
         <Typography variant="h5" gutterBottom>
           {editingDistributorId ? 'Edit Distributor' : 'Add Distributor'}
@@ -336,6 +341,30 @@ function ManageDistributors() {
         </Box>
       </Box>
 
+      {/* Filter controls */}
+      <Box sx={{ mt: 3, mb: 2 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          Filter Distributors
+        </Typography>
+        <ToggleButtonGroup
+          value={filterStatus}
+          exclusive
+          onChange={handleFilterChange}
+          aria-label="filter status"
+          size="small"
+        >
+          <ToggleButton value="all" aria-label="all distributors">
+            All
+          </ToggleButton>
+          <ToggleButton value="active" aria-label="active distributors" color="primary">
+            Active
+          </ToggleButton>
+          <ToggleButton value="historical" aria-label="historical distributors" color="secondary">
+            Historical
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+
       <TableContainer component={Paper} sx={{ mt: 4 }}>
         <Table>
           <TableHead>
@@ -350,7 +379,7 @@ function ManageDistributors() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {distributors.map((distributor) => (
+            {filteredDistributors.map((distributor) => (
               <TableRow key={distributor.id}>
                 <TableCell>{distributor.name}</TableCell>
                 <TableCell>{distributor.code}</TableCell>
@@ -387,3 +416,17 @@ function ManageDistributors() {
 }
 
 export default ManageDistributors;
+
+function handleFilterChange(event, newFilterStatus) {
+  if (newFilterStatus !== null) {
+    setFilterStatus(newFilterStatus);
+  }
+};
+
+// Filter distributors based on status
+const filteredDistributors = distributors.filter(distributor => {
+  if (filterStatus === 'all') return true;
+  if (filterStatus === 'historical' && distributor.isHistorical) return true;
+  if (filterStatus === 'active' && !distributor.isHistorical) return true;
+  return false;
+});

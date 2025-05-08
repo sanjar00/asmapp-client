@@ -14,7 +14,9 @@ import {
   Box,
   TextField,
   Alert,
-  CircularProgress
+  CircularProgress,
+  ToggleButtonGroup,
+  ToggleButton
 } from '@mui/material';
 import api from '../../services/api';
 import MaterialSelectionModal from './MaterialSelectionModal';
@@ -161,6 +163,12 @@ function SDDashboard() {
     return true;
   });
 
+  const handleFilterChange = (event, newFilterStatus) => {
+    if (newFilterStatus !== null) {
+      setFilterStatus(newFilterStatus);
+    }
+  };
+
   return (
     <div>
       <Typography variant="h4" sx={{ mt: 4, fontWeight: 'bold' }} gutterBottom>
@@ -185,37 +193,26 @@ function SDDashboard() {
         />
         
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button 
-            variant={filterStatus === 'all' ? 'contained' : 'outlined'} 
+          <ToggleButtonGroup
+            value={filterStatus}
+            exclusive
+            onChange={handleFilterChange}
+            aria-label="filter status"
             size="small"
-            onClick={() => setFilterStatus('all')}
           >
-            All
-          </Button>
-          <Button 
-            variant={filterStatus === 'completed' ? 'contained' : 'outlined'} 
-            color="success"
-            size="small"
-            onClick={() => setFilterStatus('completed')}
-          >
-            Completed
-          </Button>
-          <Button 
-            variant={filterStatus === 'partial' ? 'contained' : 'outlined'} 
-            color="warning"
-            size="small"
-            onClick={() => setFilterStatus('partial')}
-          >
-            Partial
-          </Button>
-          <Button 
-            variant={filterStatus === 'none' ? 'contained' : 'outlined'} 
-            color="primary"
-            size="small"
-            onClick={() => setFilterStatus('none')}
-          >
-            Not Started
-          </Button>
+            <ToggleButton value="all" aria-label="all distributors">
+              All
+            </ToggleButton>
+            <ToggleButton value="completed" aria-label="completed distributors" color="success">
+              Completed
+            </ToggleButton>
+            <ToggleButton value="partial" aria-label="partial distributors" color="warning">
+              Partial
+            </ToggleButton>
+            <ToggleButton value="none" aria-label="not started distributors" color="primary">
+              Not Started
+            </ToggleButton>
+          </ToggleButtonGroup>
         </Box>
       </Box>
 

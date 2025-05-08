@@ -16,6 +16,8 @@ import {
   Box,
   FormControl,
   InputLabel,
+  ToggleButtonGroup,
+  ToggleButton
 } from '@mui/material';
 
 function ManageSDs() {
@@ -25,6 +27,8 @@ function ManageSDs() {
   const [asmId, setAsmId] = useState('');
   const [asms, setASMs] = useState([]);
   const [editingSdId, setEditingSdId] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchSDs();
@@ -107,9 +111,29 @@ function ManageSDs() {
     }
   };
 
+  const handleFilterChange = (event, newFilterStatus) => {
+    if (newFilterStatus !== null) {
+      setFilterStatus(newFilterStatus);
+    }
+  };
+  
+  // Filter SDs based on search term and ASM
+  const filteredSDs = sds.filter(sd => {
+    // Apply search filter
+    if (searchTerm && !sd.User.username.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+    
+    // Apply ASM filter
+    if (filterStatus === 'all') return true;
+    if (filterStatus === 'withASM' && sd.asmId) return true;
+    if (filterStatus === 'withoutASM' && !sd.asmId) return true;
+    return false;
+  });
+
   return (
     <div>
-      {/* Форма для добавления или редактирования SD */}
+      {/* Form for adding or editing SD */}
       <Box component="form">
         <Typography variant="h5" gutterBottom>
           {editingSdId ? 'Edit SD' : 'Add SD'}
@@ -178,7 +202,38 @@ function ManageSDs() {
         )}
       </Box>
 
-      {/* Таблица SD */}
+      {/* Filter controls */}
+      <Box sx={{ mt: 3, mb: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+        <TextField
+          label="Search SDs"
+          variant="outlined"
+          fullWidth
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search by username"
+          size="small"
+        />
+        
+        <ToggleButtonGroup
+          value={filterStatus}
+          exclusive
+          onChange={handleFilterChange}
+          aria-label="filter status"
+          size="small"
+        >
+          <ToggleButton value="all" aria-label="all SDs">
+            All
+          </ToggleButton>
+          <ToggleButton value="withASM" aria-label="SDs with ASM" color="primary">
+            With ASM
+          </ToggleButton>
+          <ToggleButton value="withoutASM" aria-label="SDs without ASM" color="warning">
+            Without ASM
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+
+      {/* Table of SDs */}
       <TableContainer component={Paper} sx={{ mt: 4 }}>
         <Table>
           <TableHead>
@@ -189,7 +244,7 @@ function ManageSDs() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {sds.map((sd) => (
+            {filteredSDs.map((sd) => (
               <TableRow key={sd.id}>
                 <TableCell>{sd.User.username}</TableCell>
                 <TableCell>
