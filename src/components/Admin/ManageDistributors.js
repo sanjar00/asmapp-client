@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import {
   Typography,
@@ -122,6 +122,22 @@ function ManageDistributors() {
       }
     }
   };
+
+  // Add handleFilterChange inside the component
+  // Define handleFilterChange using useCallback to ensure stability
+  const handleFilterChange = useCallback((event, newFilterStatus) => {
+    if (newFilterStatus !== null) {
+      setFilterStatus(newFilterStatus);
+    }
+  }, []);
+
+  // Add filteredDistributors inside the component
+  const filteredDistributors = distributors.filter(distributor => {
+    if (filterStatus === 'all') return true;
+    if (filterStatus === 'historical' && distributor.isHistorical) return true;
+    if (filterStatus === 'active' && !distributor.isHistorical) return true;
+    return false;
+  });
 
   // Also update the resetForm function to reset the excelFile state
   const resetForm = () => {
@@ -413,21 +429,6 @@ function ManageDistributors() {
       </TableContainer>
     </div>
   );
-
-// Add handleFilterChange inside the component
-const handleFilterChange = (event, newFilterStatus) => {
-  if (newFilterStatus !== null) {
-    setFilterStatus(newFilterStatus);
-  }
-};
-
-// Add filteredDistributors inside the component
-const filteredDistributors = distributors.filter(distributor => {
-  if (filterStatus === 'all') return true;
-  if (filterStatus === 'historical' && distributor.isHistorical) return true;
-  if (filterStatus === 'active' && !distributor.isHistorical) return true;
-  return false;
-});
 }
 
 export default ManageDistributors;
