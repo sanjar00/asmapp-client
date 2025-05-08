@@ -161,15 +161,14 @@ const MaterialSelectionModal = ({
         return mat;
       });
       
-      // NEW CODE: Update the materials prop in the parent component
-      // This will cause the component to re-render with the updated values
+      // Update the parent component with the new materials array
       if (typeof refreshDistributors === 'function') {
         refreshDistributors();
-      } else {
-        // If refreshDistributors is not available, at least update the local state
-        // This is a fallback and might not be needed if refreshDistributors works properly
-        setMaterials(updatedMaterials);
       }
+      // Remove this line as setMaterials is not defined
+      // else {
+      //   setMaterials(updatedMaterials);
+      // }
       
       setEditingMaterialId(null);
     } catch (error) {
