@@ -417,13 +417,14 @@ function ManageDistributors() {
 
 export default ManageDistributors;
 
-function handleFilterChange(event, newFilterStatus) {
+// Move handleFilterChange inside the component
+const handleFilterChange = (event, newFilterStatus) => {
   if (newFilterStatus !== null) {
     setFilterStatus(newFilterStatus);
   }
 };
 
-// Filter distributors based on status
+// Filter distributors based on status - move inside component
 const filteredDistributors = distributors.filter(distributor => {
   if (filterStatus === 'all') return true;
   if (filterStatus === 'historical' && distributor.isHistorical) return true;
