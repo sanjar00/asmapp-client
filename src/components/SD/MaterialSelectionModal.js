@@ -164,11 +164,25 @@ const MaterialSelectionModal = ({
       // Update the parent component with the new materials array
       if (typeof refreshDistributors === 'function') {
         refreshDistributors();
+        
+        // Update the local materials state to reflect changes immediately
+        // This is the key fix - we need to update the materials prop in the parent component
+        // and also update our local view of the materials
+        const updatedMaterial = {...material};
+        updatedMaterial.MaterialDistribution = {
+          ...updatedMaterial.MaterialDistribution,
+          distributedQuantity: intValue
+        };
+        
+        // Find and update the material in the materials array
+        const materialIndex = materials.findIndex(m => m.id === material.id);
+        if (materialIndex !== -1) {
+          const newMaterials = [...materials];
+          newMaterials[materialIndex] = updatedMaterial;
+          // Force a re-render by updating a state variable
+          setSelectedMaterials([...selectedMaterials]);
+        }
       }
-      // Remove this line as setMaterials is not defined
-      // else {
-      //   setMaterials(updatedMaterials);
-      // }
       
       setEditingMaterialId(null);
     } catch (error) {
