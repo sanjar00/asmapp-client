@@ -36,6 +36,8 @@ const MaterialSelectionModal = ({
   const [newQuantity, setNewQuantity] = useState('');
   const [errorText, setErrorText] = useState('');
   const [distributor, setDistributor] = useState(null);
+  const [localTotalAllowedQuantities, setLocalTotalAllowedQuantities] = useState(totalAllowedQuantities);
+  const [localDistributorsMaterialsSum, setLocalDistributorsMaterialsSum] = useState(distributorsMaterialsSum);
 
   // 0 = All, 1 = TT, 2 = OP
   const [selectedChannel, setSelectedChannel] = useState(0);
@@ -49,6 +51,12 @@ const MaterialSelectionModal = ({
       fetchDistributorDetails();
     }
   }, [materials, distributorId]); // Remove fetchDistributorDetails from the dependency array
+
+  // Update local state when props change
+  useEffect(() => {
+    setLocalTotalAllowedQuantities(totalAllowedQuantities);
+    setLocalDistributorsMaterialsSum(distributorsMaterialsSum);
+  }, [totalAllowedQuantities, distributorsMaterialsSum]);
 
   // Fetch distributor details to get isHistorical status
   const fetchDistributorDetails = async () => {
@@ -123,12 +131,12 @@ const MaterialSelectionModal = ({
     }
     
     // Calculate available quantity using the new structure
-    const materialTotal = totalAllowedQuantities[material.id]?.total || 0;
-    const lockedTotal = totalAllowedQuantities[material.id]?.locked_total || 0;
+    const materialTotal = localTotalAllowedQuantities[material.id]?.total || 0;
+    const lockedTotal = localTotalAllowedQuantities[material.id]?.locked_total || 0;
     const availableForEditing = materialTotal - lockedTotal;
     
     // Calculate how much is currently used by other distributors (excluding this one)
-    const totalUsedByAll = distributorsMaterialsSum[material.id] || 0;
+    const totalUsedByAll = localDistributorsMaterialsSum[material.id] || 0;
     const usedByOthers = totalUsedByAll - currentDistributorQty;
     
     // Maximum this distributor can set
@@ -175,8 +183,8 @@ const MaterialSelectionModal = ({
         const materialsInfoResponse = await api.get('/sd/materials-info');
         if (materialsInfoResponse.data) {
           // Update the quantities information
-          setTotalAllowedQuantities(materialsInfoResponse.data.totalAllowedQuantities);
-          setDistributorsMaterialsSum(materialsInfoResponse.data.distributorsMaterialsSum);
+          setLocalTotalAllowedQuantities(materialsInfoResponse.data.totalAllowedQuantities);
+          setLocalDistributorsMaterialsSum(materialsInfoResponse.data.distributorsMaterialsSum);
         }
       } catch (infoError) {
         console.error('Error refreshing materials info:', infoError);
@@ -199,8 +207,18 @@ const MaterialSelectionModal = ({
 
   const handleChannelChange = (evt, newVal) => {
     setSelectedChannel(newVal);
-    setSelectedMaterials([]);
   };
+
+  // Filter materials based on selected channel
+  const filteredMaterials = materials.filter((material) => {
+    if (selectedChannel === 0) return true; // All
+    if (selectedChannel === 1) return material.channel === 'TT'; // TT
+    if (selectedChannel === 2) return material.channel === 'OP'; // OP
+    return true;
+  });
+
+  // Check if the distributor is historical
+  const isHistorical = distributor?.isHistorical || false;
 
   // Add search functionality
   const [searchTerm, setSearchTerm] = useState('');
