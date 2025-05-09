@@ -235,6 +235,32 @@ const MaterialSelectionModal = ({
     onClose();
   };
 
+  // Modify the handleSubmitRequest function to include download functionality
+  const handleSubmitRequest = async () => {
+    // Get the full material objects for the selected IDs
+    const materialsToSubmit = localMaterials.filter((material) =>
+      selectedMaterials.includes(material.id)
+    );
+    
+    try {
+      const response = await api.post(`/sd/distributors/${distributorId}/request`, {
+        materialIds: selectedMaterials
+      });
+      
+      // If the response includes a requestId, offer to download it
+      if (response.data && response.data.requestId) {
+        handleDownloadRequest(response.data.requestId);
+      }
+      
+      alert('Request submitted successfully!');
+      onClose();
+      refreshDistributors();
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      setErrorText('Failed to submit request. Please try again.');
+    }
+  };
+
   const handleTabChange = (event, newValue) => {
     setSelectedChannel(newValue);
   };
@@ -279,35 +305,6 @@ const MaterialSelectionModal = ({
     } catch (error) {
       console.error('Error downloading request:', error);
       setErrorText('Failed to download request. Please try again.');
-    }
-  };
-
-  // Modify the handleSubmitRequest function to include download functionality
-  const handleSubmitRequest = async () => {
-    // Get the full material objects for the selected IDs
-    const materialsToSubmit = localMaterials.filter((material) =>
-      selectedMaterials.includes(material.id)
-    );
-    onSubmit(materialsToSubmit);
-    onClose();
-    refreshDistributors();
-    
-    try {
-      const response = await api.post(`/sd/distributors/${distributorId}/request`, {
-        materialIds: selectedMaterials.map(id => id)
-      });
-      
-      // If the response includes a requestId, offer to download it
-      if (response.data && response.data.requestId) {
-        handleDownloadRequest(response.data.requestId);
-      }
-      
-      alert('Request submitted successfully!');
-      onClose();
-      refreshDistributors();
-    } catch (error) {
-      console.error('Error submitting request:', error);
-      setErrorText('Failed to submit request. Please try again.');
     }
   };
 
@@ -379,7 +376,7 @@ const MaterialSelectionModal = ({
           <Button
             variant="contained"
             color="primary"
-            onClick={handleSubmit}
+            onClick={handleSubmitRequest}
             disabled={selectedMaterials.length === 0 || isHistorical}
           >
             Submit Request
@@ -505,7 +502,7 @@ const MaterialSelectionModal = ({
           <Button
             variant="contained"
             color="primary"
-            onClick={handleSubmit}
+            onClick={handleSubmitRequest}
             disabled={selectedMaterials.length === 0 || isHistorical}
           >
             Submit Request
