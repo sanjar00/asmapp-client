@@ -38,6 +38,27 @@ function SDDashboard() {
     fetchDistributors();
   }, []);
 
+  // Add the missing handleDownloadRequest function
+  const handleDownloadRequest = async (selectedMaterials) => {
+    try {
+      if (!selectedDistributor || selectedMaterials.length === 0) {
+        return;
+      }
+
+      const materialIds = selectedMaterials.map(material => material.id);
+      
+      const response = await api.post(`/sd/distributors/${selectedDistributor.id}/request`, {
+        materialIds
+      });
+      
+      alert('Request submitted successfully!');
+      fetchDistributors(); // Refresh the list after submission
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      setError('Failed to submit request. Please try again.');
+    }
+  };
+
   const fetchDistributors = async () => {
     setLoading(true);
     setError(null);
