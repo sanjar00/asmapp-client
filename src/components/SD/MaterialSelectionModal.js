@@ -209,21 +209,13 @@ const MaterialSelectionModal = ({
     setSelectedChannel(newVal);
   };
 
-  // Filter materials based on selected channel
-  const filteredMaterials = materials.filter((material) => {
-    if (selectedChannel === 0) return true; // All
-    if (selectedChannel === 1) return material.channel === 'TT'; // TT
-    if (selectedChannel === 2) return material.channel === 'OP'; // OP
-    return true;
-  });
-
-  // Check if the distributor is historical
-  const isHistorical = distributor?.isHistorical || false;
-
   // Add search functionality
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Enhance the filtering with search capability
+  // Add sorting functionality
+  const [sortOrder, setSortOrder] = useState('name-asc');
+
+  // Filter materials based on all criteria (channel, search, historical status)
   const filteredMaterials = materials.filter((mat) => {
     // Skip accessories
     if (mat.parentId !== null && mat.parentId !== undefined) {
@@ -254,9 +246,6 @@ const MaterialSelectionModal = ({
     if (selectedChannel === 2) return mat.channel === 'OP';
     return true; // 0 => All
   });
-
-  // Add sorting functionality
-  const [sortOrder, setSortOrder] = useState('name-asc');
   
   // Sort the filtered materials
   const sortedMaterials = [...filteredMaterials].sort((a, b) => {
@@ -266,6 +255,9 @@ const MaterialSelectionModal = ({
     if (sortOrder === 'code-desc') return b.code.localeCompare(a.code);
     return 0;
   });
+
+  // Check if the distributor is historical
+  const isHistorical = distributor?.isHistorical || false;
 
   return (
     <Modal open={open} onClose={onClose}>
