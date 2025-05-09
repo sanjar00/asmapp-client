@@ -38,6 +38,8 @@ const MaterialSelectionModal = ({
   const [distributor, setDistributor] = useState(null);
   const [localTotalAllowedQuantities, setLocalTotalAllowedQuantities] = useState(totalAllowedQuantities);
   const [localDistributorsMaterialsSum, setLocalDistributorsMaterialsSum] = useState(distributorsMaterialsSum);
+  // Add this new state to track materials locally
+  const [localMaterials, setLocalMaterials] = useState(materials);
 
   // 0 = All, 1 = TT, 2 = OP
   const [selectedChannel, setSelectedChannel] = useState(0);
@@ -45,6 +47,7 @@ const MaterialSelectionModal = ({
   useEffect(() => {
     setSelectedMaterials([]);
     setSelectedChannel(0);
+    setLocalMaterials(materials);
     
     // Get distributor details to check if it's historical
     if (distributorId) {
@@ -75,6 +78,14 @@ const MaterialSelectionModal = ({
         : [...prev, materialId]
     );
   };
+
+  // Update this to use localMaterials instead of materials
+  const filteredMaterials = localMaterials.filter((material) => {
+    if (selectedChannel === 0) return true;
+    if (selectedChannel === 1 && material.channel === 'TT') return true;
+    if (selectedChannel === 2 && material.channel === 'OP') return true;
+    return false;
+  });
 
   const handleSelectAll = () => {
     const selectable = filteredMaterials
@@ -155,27 +166,23 @@ const MaterialSelectionModal = ({
         newQuantity: intValue
       });
       
-      // Update the materials array directly to reflect changes immediately
-      const updatedMaterials = materials.map(m => {
-        if (m.id === material.id) {
-          return {
-            ...m,
-            MaterialDistribution: {
-              ...m.MaterialDistribution,
-              distributedQuantity: intValue
-            }
-          };
-        }
-        return m;
-      });
+      // Update the local materials array to reflect changes immediately
+      setLocalMaterials(prevMaterials => 
+        prevMaterials.map(m => {
+          if (m.id === material.id) {
+            return {
+              ...m,
+              MaterialDistribution: {
+                ...m.MaterialDistribution,
+                distributedQuantity: intValue
+              }
+            };
+          }
+          return m;
+        })
+      );
       
-      // Update the materials in the parent component
-      if (typeof refreshDistributors === 'function') {
-        refreshDistributors();
-      }
-      
-      // Update the local state with the modified materials
-      // This is the key fix - we need to update the materials array in the modal
+      // Reset editing state
       setEditingMaterialId(null);
       
       // Also fetch updated material info to refresh the available quantities
@@ -189,6 +196,11 @@ const MaterialSelectionModal = ({
       } catch (infoError) {
         console.error('Error refreshing materials info:', infoError);
       }
+      
+      // Optionally refresh the parent component's data
+      if (typeof refreshDistributors === 'function') {
+        refreshDistributors();
+      }
     } catch (error) {
       console.error('Error saving quantity:', error);
       // Display the specific error message from the backend
@@ -199,68 +211,46 @@ const MaterialSelectionModal = ({
   };
 
   const handleSubmit = () => {
-    // gather selected
-    const selected = materials.filter((mat) => selectedMaterials.includes(mat.id));
-    onSubmit(selected);
+    // Get the full material objects for the selected IDs
+    const materialsToSubmit = localMaterials.filter((material) =>
+      selectedMaterials.includes(material.id)
+    );
+    onSubmit(materialsToSubmit);
     onClose();
   };
 
-  const handleChannelChange = (evt, newVal) => {
-    setSelectedChannel(newVal);
+  const handleTabChange = (event, newValue) => {
+    setSelectedChannel(newValue);
   };
 
-  // Add search functionality
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  // Add sorting functionality
-  const [sortOrder, setSortOrder] = useState('name-asc');
+  // Calculate the number of materials that can be selected
+  const selectableMaterialsCount = filteredMaterials.filter(
+    (mat) =>
+      !mat.RequestMaterials ||
+      !mat.RequestMaterials.some(
+        (rm) =>
+          rm.locked && rm.Request && rm.Request.distributorId === distributorId
+      )
+  ).length;
 
-  // Filter materials based on all criteria (channel, search, historical status)
-  const filteredMaterials = materials.filter((mat) => {
-    // Skip accessories
-    if (mat.parentId !== null && mat.parentId !== undefined) {
-      return false;
-    }
-    
-    // Check historical status match
-    if (distributor && distributor.isHistorical !== undefined) {
-      // If distributor is historical, only show historical materials
-      if (distributor.isHistorical && !mat.isHistorical) {
-        return false;
-      }
-      
-      // If distributor is not historical, don't show historical materials
-      if (!distributor.isHistorical && mat.isHistorical) {
-        return false;
-      }
-    }
-    
-    // Apply search filter
-    if (searchTerm && !mat.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-        !mat.code.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
-    }
-    
-    // Apply channel filter
-    if (selectedChannel === 1) return mat.channel === 'TT';
-    if (selectedChannel === 2) return mat.channel === 'OP';
-    return true; // 0 => All
-  });
-  
-  // Sort the filtered materials
-  const sortedMaterials = [...filteredMaterials].sort((a, b) => {
-    if (sortOrder === 'name-asc') return a.name.localeCompare(b.name);
-    if (sortOrder === 'name-desc') return b.name.localeCompare(a.name);
-    if (sortOrder === 'code-asc') return a.code.localeCompare(b.code);
-    if (sortOrder === 'code-desc') return b.code.localeCompare(a.code);
-    return 0;
-  });
+  // Calculate the number of materials that are already locked
+  const lockedMaterialsCount = filteredMaterials.filter((mat) =>
+    mat.RequestMaterials &&
+    mat.RequestMaterials.some(
+      (rm) =>
+        rm.locked && rm.Request && rm.Request.distributorId === distributorId
+    )
+  ).length;
 
   // Check if the distributor is historical
   const isHistorical = distributor?.isHistorical || false;
 
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      aria-labelledby="material-selection-modal-title"
+    >
       <Box
         sx={{
           position: 'absolute',
@@ -273,19 +263,28 @@ const MaterialSelectionModal = ({
           bgcolor: 'background.paper',
           boxShadow: 24,
           p: 4,
+          borderRadius: 1,
           overflow: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
         }}
       >
-        <Typography variant="h6" component="h2" gutterBottom>
-          Select Materials for {distributor?.name}
+        <Typography
+          id="material-selection-modal-title"
+          variant="h6"
+          component="h2"
+          gutterBottom
+        >
+          Select Materials
         </Typography>
 
-        {/* Channel filter tabs */}
+        {isHistorical && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            This is a historical distributor. You can view but not modify its materials.
+          </Alert>
+        )}
+
         <Tabs
           value={selectedChannel}
-          onChange={(e, newValue) => setSelectedChannel(newValue)}
+          onChange={handleTabChange}
           sx={{ mb: 2 }}
         >
           <Tab label="All" />
@@ -293,99 +292,127 @@ const MaterialSelectionModal = ({
           <Tab label="OP" />
         </Tabs>
 
-        {/* Select/Deselect All buttons at the top */}
-        <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
-          <Button variant="outlined" onClick={handleSelectAll}>
-            Select All
-          </Button>
-          <Button variant="outlined" onClick={handleDeselectAll}>
-            Deselect All
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Box>
+            <Button
+              variant="outlined"
+              onClick={handleSelectAll}
+              sx={{ mr: 1 }}
+              disabled={selectableMaterialsCount === 0 || isHistorical}
+            >
+              Select All
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={handleDeselectAll}
+              disabled={selectedMaterials.length === 0 || isHistorical}
+            >
+              Deselect All
+            </Button>
+          </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSubmit}
+            disabled={selectedMaterials.length === 0 || isHistorical}
+          >
+            Submit Request
           </Button>
         </Box>
 
-        {/* Materials list */}
-        <List sx={{ mb: 2, flexGrow: 1, overflow: 'auto' }}>
+        {errorText && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {errorText}
+          </Alert>
+        )}
+
+        <List>
           {filteredMaterials.map((material) => {
             const isLocked =
               material.RequestMaterials &&
               material.RequestMaterials.some(
                 (rm) =>
-                  rm.locked && rm.Request && rm.Request.distributorId === distributorId
+                  rm.locked &&
+                  rm.Request &&
+                  rm.Request.distributorId === distributorId
               );
-  
-            // FIX: Access the 'total' property from the object
-            const maxAllowed = totalAllowedQuantities[material.id]?.total || 0;
-            const totalLockedAll = distributorsMaterialsSum[material.id] || 0;
-            const distQty = material.MaterialDistribution?.distributedQuantity || 0;
-  
-            const lockedByOthers = Math.max(0, totalLockedAll - distQty);
-            const leftForThisDist = Math.max(0, maxAllowed - lockedByOthers);
-  
+
             const isEditing = editingMaterialId === material.id;
-  
+
             return (
               <React.Fragment key={material.id}>
                 <ListItem
-                  disableGutters
-                  disabled={isLocked}
-                  sx={{
-                    backgroundColor: isLocked ? 'rgba(0,0,0,0.1)' : 'inherit',
-                    flexDirection: 'column',
-                    alignItems: 'start',
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                    <ListItemIcon>
-                      <Checkbox
-                        edge="start"
-                        checked={selectedMaterials.includes(material.id)}
-                        disabled={isLocked}
-                        onChange={() => handleToggle(material.id)}
-                      />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={`${material.name} (Code: ${material.code})${material.isHistorical ? ' - Historical' : ''}`}
-                      secondary={`Channel: ${material.channel} | Currently distributed: ${distQty}`}
-                    />
-                    {!isLocked && !isEditing && (
-                      <IconButton onClick={() => handleStartEditing(material)}>
-                        <Edit />
-                      </IconButton>
-                    )}
-                  </Box>
-  
-                  {isEditing && (
-                    <Box sx={{ pl: 7, display: 'flex', flexDirection: 'column', mt: 1 }}>
-                      <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                        Total allowed: {maxAllowed} | Left for you: {leftForThisDist}
-                      </Typography>
-  
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  secondaryAction={
+                    isLocked || isHistorical ? null : isEditing ? (
+                      <>
                         <TextField
-                          label="New Quantity"
-                          variant="outlined"
-                          size="small"
                           value={newQuantity}
-                          onChange={(e) =>
-                            setNewQuantity(e.target.value.replace(/^0+/, ''))
-                          }
-                          sx={{ mr: 1, width: '120px' }}
+                          onChange={(e) => setNewQuantity(e.target.value)}
+                          type="number"
+                          size="small"
+                          sx={{ width: 80, mr: 1 }}
+                          inputProps={{ min: 1 }}
+                          autoFocus
                         />
-                        <IconButton onClick={() => handleSaveQuantity(material)} color="primary">
+                        <IconButton
+                          edge="end"
+                          onClick={() => handleSaveQuantity(material)}
+                          color="primary"
+                        >
                           <Save />
                         </IconButton>
-                        <IconButton onClick={handleCancelEditing} color="secondary">
+                        <IconButton
+                          edge="end"
+                          onClick={handleCancelEditing}
+                          color="error"
+                        >
                           <Close />
                         </IconButton>
-                      </Box>
-                      
-                      {errorText && (
-                        <Alert severity="error" sx={{ mt: 2, mb: 2 }}>
-                          {errorText}
-                        </Alert>
-                      )}
-                    </Box>
-                  )}
+                      </>
+                    ) : (
+                      <IconButton
+                        edge="end"
+                        onClick={() => handleStartEditing(material)}
+                      >
+                        <Edit />
+                      </IconButton>
+                    )
+                  }
+                >
+                  <ListItemIcon>
+                    <Checkbox
+                      edge="start"
+                      checked={selectedMaterials.includes(material.id)}
+                      onChange={() => handleToggle(material.id)}
+                      disabled={isLocked || isHistorical}
+                    />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={`${material.name} (${material.code})`}
+                    secondary={
+                      <>
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          color="text.primary"
+                        >
+                          Channel: {material.channel}
+                        </Typography>
+                        <br />
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          color={isLocked ? 'success.main' : 'text.primary'}
+                        >
+                          {isLocked
+                            ? 'Status: Locked (Already requested)'
+                            : `Distributed Quantity: ${
+                                material.MaterialDistribution?.distributedQuantity || 0
+                              }`}
+                        </Typography>
+                      </>
+                    }
+                  />
                 </ListItem>
                 <Divider />
               </React.Fragment>
@@ -393,15 +420,23 @@ const MaterialSelectionModal = ({
           })}
         </List>
 
-        {/* Submit button */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          <Button onClick={onClose}>Cancel</Button>
+        {filteredMaterials.length === 0 && (
+          <Typography variant="body1" sx={{ textAlign: 'center', my: 2 }}>
+            No materials available for this channel.
+          </Typography>
+        )}
+
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+          <Button onClick={onClose} sx={{ mr: 1 }}>
+            Cancel
+          </Button>
           <Button
             variant="contained"
+            color="primary"
             onClick={handleSubmit}
-            disabled={selectedMaterials.length === 0}
+            disabled={selectedMaterials.length === 0 || isHistorical}
           >
-            Submit
+            Submit Request
           </Button>
         </Box>
       </Box>
