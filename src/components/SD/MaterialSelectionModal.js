@@ -339,6 +339,14 @@ const MaterialSelectionModal = ({
 
             const isEditing = editingMaterialId === material.id;
 
+            // Calculate available quantity for this material
+            const materialTotal = localTotalAllowedQuantities[material.id]?.total || 0;
+            const lockedTotal = localTotalAllowedQuantities[material.id]?.locked_total || 0;
+            const currentDistributorQty = material.MaterialDistribution?.distributedQuantity || 0;
+            const totalUsedByAll = localDistributorsMaterialsSum[material.id] || 0;
+            const usedByOthers = totalUsedByAll - currentDistributorQty;
+            const maxUserCanSet = materialTotal - lockedTotal - usedByOthers;
+
             return (
               <React.Fragment key={material.id}>
                 <ListItem
@@ -354,6 +362,9 @@ const MaterialSelectionModal = ({
                           inputProps={{ min: 1 }}
                           autoFocus
                         />
+                        <Typography variant="body2" sx={{ display: 'inline', mr: 1 }}>
+                          Max: {maxUserCanSet} / Total: {materialTotal}
+                        </Typography>
                         <IconButton
                           edge="end"
                           onClick={() => handleSaveQuantity(material)}
