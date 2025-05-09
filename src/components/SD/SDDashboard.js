@@ -89,6 +89,32 @@ function SDDashboard() {
     setShowFilters(!showFilters);
   };
 
+  // Add the filteredDistributors computed property
+  const filteredDistributors = distributors.filter(distributor => {
+    const materials = distributor.Materials || [];
+    const totalMaterials = materials.length;
+    
+    const lockedMaterialsCount = materials.filter(mat => 
+      mat.RequestMaterials && 
+      mat.RequestMaterials.some(rm => 
+        rm.locked && 
+        rm.Request && 
+        rm.Request.distributorId === distributor.id
+      )
+    ).length;
+    
+    const allLocked = totalMaterials > 0 && lockedMaterialsCount === totalMaterials;
+    const partiallyLocked = lockedMaterialsCount > 0 && !allLocked;
+    const noMaterials = totalMaterials === 0;
+    
+    if (filterStatus === 'all') return true;
+    if (filterStatus === 'completed' && allLocked) return true;
+    if (filterStatus === 'partial' && partiallyLocked) return true;
+    if (filterStatus === 'none' && !partiallyLocked && !allLocked && !noMaterials) return true;
+    
+    return false;
+  });
+
   return (
     <div>
       <Typography variant="h4" sx={{ mt: 4, fontWeight: 'bold' }} gutterBottom>
