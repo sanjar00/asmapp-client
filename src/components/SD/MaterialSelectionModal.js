@@ -261,6 +261,56 @@ const MaterialSelectionModal = ({
   // Check if the distributor is historical
   const isHistorical = distributor?.isHistorical || false;
 
+  // Add this new function to download the request
+  const handleDownloadRequest = async (requestId) => {
+    try {
+      const response = await api.get(`/sd/requests/${requestId}/download`, {
+        responseType: 'blob',
+      });
+  
+      // Create a link to download the file
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `Request_${requestId}.xlsx`;
+      link.click();
+    } catch (error) {
+      console.error('Error downloading request:', error);
+      setErrorText('Failed to download request. Please try again.');
+    }
+  };
+
+  // Modify the handleSubmitRequest function to include download functionality
+  const handleSubmitRequest = async () => {
+    // Get the full material objects for the selected IDs
+    const materialsToSubmit = localMaterials.filter((material) =>
+      selectedMaterials.includes(material.id)
+    );
+    onSubmit(materialsToSubmit);
+    onClose();
+    refreshDistributors();
+    
+    try {
+      const response = await api.post(`/sd/distributors/${distributorId}/request`, {
+        materialIds: selectedMaterials.map(id => id)
+      });
+      
+      // If the response includes a requestId, offer to download it
+      if (response.data && response.data.requestId) {
+        handleDownloadRequest(response.data.requestId);
+      }
+      
+      alert('Request submitted successfully!');
+      onClose();
+      refreshDistributors();
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      setErrorText('Failed to submit request. Please try again.');
+    }
+  };
+
   return (
     <Modal
       open={open}
