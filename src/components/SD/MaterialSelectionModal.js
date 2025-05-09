@@ -44,6 +44,31 @@ const MaterialSelectionModal = ({
   // 0 = All, 1 = TT, 2 = OP
   const [selectedChannel, setSelectedChannel] = useState(0);
 
+  // Helper function to calculate available quantities for a material
+  const getAvailableQuantity = (material) => {
+    // Get the total allowed quantity for this material
+    const materialTotal = localTotalAllowedQuantities[material.id]?.total || 0;
+    
+    // Get the locked quantity (already requested by distributors)
+    const lockedTotal = localTotalAllowedQuantities[material.id]?.locked_total || 0;
+    
+    // Get current distributor quantity
+    const currentDistributorQty = material.MaterialDistribution?.distributedQuantity || 0;
+    
+    // Calculate how much is currently used by other distributors (excluding this one)
+    const totalUsedByAll = localDistributorsMaterialsSum[material.id] || 0;
+    const usedByOthers = totalUsedByAll - currentDistributorQty;
+    
+    // Maximum this distributor can set
+    const maxUserCanSet = materialTotal - lockedTotal - usedByOthers;
+    
+    return {
+      total: materialTotal,
+      available: maxUserCanSet,
+      current: currentDistributorQty
+    };
+  };
+
   useEffect(() => {
     setSelectedMaterials([]);
     setSelectedChannel(0);
@@ -141,20 +166,11 @@ const MaterialSelectionModal = ({
       return;
     }
     
-    // Calculate available quantity using the new structure
-    const materialTotal = localTotalAllowedQuantities[material.id]?.total || 0;
-    const lockedTotal = localTotalAllowedQuantities[material.id]?.locked_total || 0;
-    const availableForEditing = materialTotal - lockedTotal;
+    // Get available quantity info
+    const { available } = getAvailableQuantity(material);
     
-    // Calculate how much is currently used by other distributors (excluding this one)
-    const totalUsedByAll = localDistributorsMaterialsSum[material.id] || 0;
-    const usedByOthers = totalUsedByAll - currentDistributorQty;
-    
-    // Maximum this distributor can set
-    const maxUserCanSet = materialTotal - lockedTotal - usedByOthers;
-    
-    if (intValue > maxUserCanSet) {
-      setErrorText(`Cannot exceed available limit of ${maxUserCanSet}`);
+    if (intValue > available) {
+      setErrorText(`Cannot exceed available limit of ${available}`);
       return;
     }
 
@@ -338,14 +354,9 @@ const MaterialSelectionModal = ({
               );
 
             const isEditing = editingMaterialId === material.id;
-
-            // Calculate available quantity for this material
-            const materialTotal = localTotalAllowedQuantities[material.id]?.total || 0;
-            const lockedTotal = localTotalAllowedQuantities[material.id]?.locked_total || 0;
-            const currentDistributorQty = material.MaterialDistribution?.distributedQuantity || 0;
-            const totalUsedByAll = localDistributorsMaterialsSum[material.id] || 0;
-            const usedByOthers = totalUsedByAll - currentDistributorQty;
-            const maxUserCanSet = materialTotal - lockedTotal - usedByOthers;
+            
+            // Get material quantities
+            const { total: materialTotal } = getAvailableQuantity(material);
 
             return (
               <React.Fragment key={material.id}>
@@ -363,7 +374,7 @@ const MaterialSelectionModal = ({
                           autoFocus
                         />
                         <Typography variant="body2" sx={{ display: 'inline', mr: 1 }}>
-                          Max: {maxUserCanSet} / Total: {materialTotal}
+                          Total allowed: {materialTotal}
                         </Typography>
                         <IconButton
                           edge="end"
