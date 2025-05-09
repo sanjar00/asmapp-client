@@ -147,42 +147,40 @@ const MaterialSelectionModal = ({
         newQuantity: intValue
       });
       
-      // Update the materials array directly
-      const updatedMaterials = [...materials];
-      const materialIndex = updatedMaterials.findIndex(m => m.id === material.id);
+      // Update the materials array directly to reflect changes immediately
+      const updatedMaterials = materials.map(m => {
+        if (m.id === material.id) {
+          return {
+            ...m,
+            MaterialDistribution: {
+              ...m.MaterialDistribution,
+              distributedQuantity: intValue
+            }
+          };
+        }
+        return m;
+      });
       
-      if (materialIndex !== -1) {
-        // Create a new object to ensure React detects the change
-        updatedMaterials[materialIndex] = {
-          ...updatedMaterials[materialIndex],
-          MaterialDistribution: {
-            ...updatedMaterials[materialIndex].MaterialDistribution,
-            distributedQuantity: intValue
-          }
-        };
-      }
-      
-      // Call the parent component's refresh function
+      // Update the materials in the parent component
       if (typeof refreshDistributors === 'function') {
         refreshDistributors();
       }
       
-      // Force a re-render by updating the state with the modified materials
-      // This is the key fix - we need to trigger a re-render
-      setSelectedMaterials([...selectedMaterials]);
+      // Update the local state with the modified materials
+      // This is the key fix - we need to update the materials array in the modal
+      setEditingMaterialId(null);
       
       // Also fetch updated material info to refresh the available quantities
       try {
         const materialsInfoResponse = await api.get('/sd/materials-info');
         if (materialsInfoResponse.data) {
-          // If we had state setters for these, we would update them here
-          // For now, we'll rely on the parent component's refresh
+          // Update the quantities information
+          setTotalAllowedQuantities(materialsInfoResponse.data.totalAllowedQuantities);
+          setDistributorsMaterialsSum(materialsInfoResponse.data.distributorsMaterialsSum);
         }
       } catch (infoError) {
         console.error('Error refreshing materials info:', infoError);
       }
-      
-      setEditingMaterialId(null);
     } catch (error) {
       console.error('Error saving quantity:', error);
       // Display the specific error message from the backend
@@ -261,64 +259,32 @@ const MaterialSelectionModal = ({
           transform: 'translate(-50%, -50%)',
           width: '80%',
           maxWidth: 800,
+          maxHeight: '90vh',
           bgcolor: 'background.paper',
           boxShadow: 24,
           p: 4,
-          maxHeight: '90vh',
           overflow: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <Typography variant="h6" component="h2" gutterBottom>
-          Select Materials for {distributor?.name || 'Distributor'}
+          Select Materials for {selectedDistributor?.name}
         </Typography>
 
-        {errorText && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {errorText}
-          </Alert>
-        )}
-
-        <Box sx={{ mb: 2 }}>
-          <Tabs value={selectedChannel} onChange={handleChannelChange}>
-            <Tab label="All" />
-            <Tab label="TT" />
-            <Tab label="OP" />
-          </Tabs>
-        </Box>
-
-        {/* Add search field */}
-        <TextField
-          label="Search materials"
-          variant="outlined"
-          fullWidth
-          margin="normal"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search by name or code"
+        {/* Channel filter tabs */}
+        <Tabs
+          value={selectedChannel}
+          onChange={(e, newValue) => setSelectedChannel(newValue)}
           sx={{ mb: 2 }}
-        />
+        >
+          <Tab label="All" />
+          <Tab label="TT" />
+          <Tab label="OP" />
+        </Tabs>
 
-        {/* Add sort controls */}
-        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ mr: 2 }}>Sort by:</Typography>
-          <Button 
-            variant={sortOrder.startsWith('name') ? 'contained' : 'outlined'} 
-            size="small" 
-            onClick={() => setSortOrder(sortOrder === 'name-asc' ? 'name-desc' : 'name-asc')}
-            sx={{ mr: 1 }}
-          >
-            Name {sortOrder === 'name-asc' ? '↑' : sortOrder === 'name-desc' ? '↓' : ''}
-          </Button>
-          <Button 
-            variant={sortOrder.startsWith('code') ? 'contained' : 'outlined'} 
-            size="small" 
-            onClick={() => setSortOrder(sortOrder === 'code-asc' ? 'code-desc' : 'code-asc')}
-          >
-            Code {sortOrder === 'code-asc' ? '↑' : sortOrder === 'code-desc' ? '↓' : ''}
-          </Button>
-        </Box>
-
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        {/* Select/Deselect All buttons at the top */}
+        <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
           <Button variant="outlined" onClick={handleSelectAll}>
             Select All
           </Button>
@@ -327,10 +293,9 @@ const MaterialSelectionModal = ({
           </Button>
         </Box>
 
-        <Divider sx={{ mb: 2 }} />
-
-        <List sx={{ maxHeight: '50vh', overflow: 'auto' }}>
-          {sortedMaterials.map((material) => {
+        {/* Materials list */}
+        <List sx={{ mb: 2, flexGrow: 1, overflow: 'auto' }}>
+          {filteredMaterials.map((material) => {
             const isLocked =
               material.RequestMaterials &&
               material.RequestMaterials.some(
@@ -417,47 +382,16 @@ const MaterialSelectionModal = ({
             );
           })}
         </List>
-        {/* Remove the extra closing parenthesis here */}
 
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
+        {/* Submit button */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <Button onClick={onClose}>Cancel</Button>
           <Button
             variant="contained"
-            color="primary"
-            onClick={handleSelectAll}
-            disabled={
-              filteredMaterials.length === 0 ||
-              filteredMaterials.every(
-                (mat) =>
-                  mat.RequestMaterials &&
-                  mat.RequestMaterials.some(
-                    (rm) => rm.locked && rm.Request && rm.Request.distributorId === distributorId
-                  )
-              )
-            }
-          >
-            Select All
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={handleDeselectAll}
-            disabled={selectedMaterials.length === 0}
-          >
-            Deselect All
-          </Button>
-        </Box>
-
-        <Box sx={{ mt: 2, textAlign: 'right' }}>
-          <Button
-            variant="contained"
-            color="secondary"
             onClick={handleSubmit}
-            sx={{ mr: 1 }}
             disabled={selectedMaterials.length === 0}
           >
-            Download Request
-          </Button>
-          <Button variant="outlined" onClick={onClose}>
-            Close
+            Submit
           </Button>
         </Box>
       </Box>
