@@ -151,10 +151,10 @@ const MaterialSelectionModal = ({
     const usedByOthers = totalUsedByAll - currentDistributorQty;
     
     // Maximum this distributor can set
-    const maxUserCanSet = availableForEditing - usedByOthers;
+    const maxUserCanSet = materialTotal - lockedTotal - usedByOthers;
     
-    if (intValue > maxUserCanSet + currentDistributorQty) {
-      setErrorText(`Cannot exceed available limit of ${maxUserCanSet + currentDistributorQty}`);
+    if (intValue > maxUserCanSet) {
+      setErrorText(`Cannot exceed available limit of ${maxUserCanSet}`);
       return;
     }
 
