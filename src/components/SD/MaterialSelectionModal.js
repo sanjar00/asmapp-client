@@ -235,26 +235,46 @@ const MaterialSelectionModal = ({
     onClose();
   };
 
-  // Modify the handleSubmitRequest function to include download functionality
   const handleSubmitRequest = async () => {
-    // Get the full material objects for the selected IDs
-    const materialsToSubmit = localMaterials.filter((material) =>
-      selectedMaterials.includes(material.id)
-    );
-    
+    if (selectedMaterials.length === 0) {
+      setErrorText('Please select at least one material');
+      return;
+    }
+
     try {
-      const response = await api.post(`/sd/distributors/${distributorId}/request`, {
-        materialIds: selectedMaterials
+      setErrorText('');
+      
+      // Get the selected material objects
+      const selectedMaterialObjects = localMaterials.filter(material => 
+        selectedMaterials.includes(material.id)
+      );
+      
+      // Call the onSubmit function passed from parent component
+      await onSubmit(selectedMaterialObjects);
+      
+      // Add download functionality
+      const materialIds = selectedMaterials;
+      const response = await api.get(`/sd/distributors/${distributorId}/download-request`, {
+        params: { materialIds: materialIds.join(',') },
+        responseType: 'blob'
       });
       
-      // If the response includes a requestId, offer to download it
-      if (response.data && response.data.requestId) {
-        handleDownloadRequest(response.data.requestId);
-      }
+      // Create a download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Request_${distributorId}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
       
-      alert('Request submitted successfully!');
+      // Close the modal after successful submission and download
       onClose();
-      refreshDistributors();
+      
+      // Refresh the distributors list if refreshDistributors function is provided
+      if (refreshDistributors) {
+        refreshDistributors();
+      }
     } catch (error) {
       console.error('Error submitting request:', error);
       setErrorText('Failed to submit request. Please try again.');
