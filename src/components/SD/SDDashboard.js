@@ -12,12 +12,14 @@ import {
   Paper,
   Button,
   Box,
-  TextField,
   Alert,
   CircularProgress,
   ToggleButtonGroup,
-  ToggleButton
+  ToggleButton,
+  Collapse,
+  IconButton
 } from '@mui/material';
+import { FilterList } from '@mui/icons-material';
 import api from '../../services/api';
 import MaterialSelectionModal from './MaterialSelectionModal';
 
@@ -29,8 +31,8 @@ function SDDashboard() {
   const [distributorsMaterialsSum, setDistributorsMaterialsSum] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'completed', 'partial', 'none'
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchDistributors();
@@ -77,96 +79,14 @@ function SDDashboard() {
     setSelectedDistributor(null);
   };
 
-  // This is where we gather selected materials from the modal 
-  // => send them to POST /requests/generate-request
-  // This is where we gather selected materials from the modal 
-// => send them to POST /requests/generate-request
-  const handleDownloadRequest = async (selectedMaterials) => {
-    if (!selectedDistributor) return;
-
-    try {
-      // First lock the quantities
-      await api.post('/sd/lock', {
-        distributorId: selectedDistributor.id,
-        materials: selectedMaterials.map(mat => ({
-          materialId: mat.id,
-          quantity: mat.MaterialDistribution.distributedQuantity
-        }))
-      });
-
-      const requestData = {
-        distributorName: selectedDistributor.name,
-        distributorCode: selectedDistributor.code || 'Unknown',
-        asmCode: selectedDistributor.asmCode || 'Unknown',
-        materials: selectedMaterials.map((mat) => ({
-          name: mat.name,
-          code: mat.code,
-          quantity: mat.MaterialDistribution.distributedQuantity,
-        })),
-      };
-
-      const response = await api.post('/requests/generate-request', requestData, {
-        responseType: 'blob',
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Request_${selectedDistributor.name}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Refresh data after locking
-      await fetchMaterialsInfo(selectedDistributor.sdId);
-      fetchDistributors();
-      handleCloseModal();
-    } catch (error) {
-      console.error('Error generating document:', error);
-    }
-  };
-
-  // Filter distributors based on search term and status
-  const filteredDistributors = distributors.filter(distributor => {
-    // Apply search filter
-    if (searchTerm && !distributor.name.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
-    }
-    
-    // Apply status filter
-    const materials = distributor.Materials || [];
-    const totalMaterials = materials.length;
-    
-    if (totalMaterials === 0) {
-      return filterStatus === 'all' || filterStatus === 'none';
-    }
-    
-    const lockedMaterialsCount = materials.filter((mat) => {
-      return (
-        mat.RequestMaterials &&
-        mat.RequestMaterials.some(
-          (rm) =>
-            rm.locked &&
-            rm.Request &&
-            rm.Request.distributorId === distributor.id
-        )
-      );
-    }).length;
-    
-    const allLocked = totalMaterials > 0 && lockedMaterialsCount === totalMaterials;
-    const partiallyLocked = lockedMaterialsCount > 0 && !allLocked;
-    
-    if (filterStatus === 'completed' && !allLocked) return false;
-    if (filterStatus === 'partial' && !partiallyLocked) return false;
-    if (filterStatus === 'none' && (allLocked || partiallyLocked || totalMaterials === 0)) return false;
-    
-    return true;
-  });
-
   const handleFilterChange = (event, newFilterStatus) => {
     if (newFilterStatus !== null) {
       setFilterStatus(newFilterStatus);
     }
+  };
+
+  const toggleFilters = () => {
+    setShowFilters(!showFilters);
   };
 
   return (
@@ -181,39 +101,40 @@ function SDDashboard() {
         </Alert>
       )}
       
-      <Box sx={{ mb: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
-        <TextField
-          label="Search distributors"
-          variant="outlined"
-          fullWidth
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search by name"
-          size="small"
-        />
+      <Box sx={{ mb: 2 }}>
+        <Button 
+          variant="outlined" 
+          startIcon={<FilterList />}
+          onClick={toggleFilters}
+          sx={{ mb: 1 }}
+        >
+          Filter Options
+        </Button>
         
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <ToggleButtonGroup
-            value={filterStatus}
-            exclusive
-            onChange={handleFilterChange}
-            aria-label="filter status"
-            size="small"
-          >
-            <ToggleButton value="all" aria-label="all distributors">
-              All
-            </ToggleButton>
-            <ToggleButton value="completed" aria-label="completed distributors" color="success">
-              Completed
-            </ToggleButton>
-            <ToggleButton value="partial" aria-label="partial distributors" color="warning">
-              Partial
-            </ToggleButton>
-            <ToggleButton value="none" aria-label="not started distributors" color="primary">
-              Not Started
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
+        <Collapse in={showFilters}>
+          <Box sx={{ mt: 1, mb: 2 }}>
+            <ToggleButtonGroup
+              value={filterStatus}
+              exclusive
+              onChange={handleFilterChange}
+              aria-label="filter status"
+              size="small"
+            >
+              <ToggleButton value="all" aria-label="all distributors">
+                All
+              </ToggleButton>
+              <ToggleButton value="completed" aria-label="completed distributors" color="success">
+                Completed
+              </ToggleButton>
+              <ToggleButton value="partial" aria-label="partial distributors" color="warning">
+                Partial
+              </ToggleButton>
+              <ToggleButton value="none" aria-label="not started distributors" color="primary">
+                Not Started
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+        </Collapse>
       </Box>
 
       {loading ? (
@@ -226,15 +147,13 @@ function SDDashboard() {
             <TableHead>
               <TableRow>
                 <TableCell><strong>Distributor Name</strong></TableCell>
-                <TableCell><strong>Region</strong></TableCell>
-                <TableCell><strong>Materials</strong></TableCell>
                 <TableCell><strong>Actions</strong></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredDistributors.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center">
+                  <TableCell colSpan={2} align="center">
                     No distributors found matching your criteria
                   </TableCell>
                 </TableRow>
