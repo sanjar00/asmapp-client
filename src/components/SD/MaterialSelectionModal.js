@@ -279,7 +279,7 @@ const MaterialSelectionModal = ({
         }}
       >
         <Typography variant="h6" component="h2" gutterBottom>
-          Select Materials for {selectedDistributor?.name}
+          Select Materials for {distributor?.name}
         </Typography>
 
         {/* Channel filter tabs */}
