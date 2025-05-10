@@ -237,8 +237,52 @@ const MaterialSelectionModal = ({
     onClose();
   };
 
-  // Remove handleSubmitRequest function as it's redundant and causing the 404 error
-  
+  const handleSubmitRequest = async () => {
+    if (selectedMaterials.length === 0) {
+      setErrorText('Please select at least one material');
+      return;
+    }
+
+    try {
+      setErrorText('');
+      
+      // Get the selected material objects
+      const selectedMaterialObjects = localMaterials.filter(material => 
+        selectedMaterials.includes(material.id)
+      );
+      
+      // Call the onSubmit function passed from parent component
+      await onSubmit(selectedMaterialObjects);
+      
+      // Add download functionality
+      const materialIds = selectedMaterials;
+      const response = await api.get(`/sd/distributors/${distributorId}/download-request`, {
+        params: { materialIds: materialIds.join(',') },
+        responseType: 'blob'
+      });
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Request_${distributorId}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      // Close the modal after successful submission and download
+      onClose();
+      
+      // Refresh the distributors list if refreshDistributors function is provided
+      if (refreshDistributors) {
+        refreshDistributors();
+      }
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      setErrorText('Failed to submit request. Please try again.');
+    }
+  };
+
   const handleTabChange = (event, newValue) => {
     setSelectedChannel(newValue);
   };
@@ -354,7 +398,7 @@ const MaterialSelectionModal = ({
           <Button
             variant="contained"
             color="primary"
-            onClick={handleSubmit}
+            onClick={handleSubmitRequest}
             disabled={selectedMaterials.length === 0 || isHistorical}
           >
             Submit Request
@@ -480,7 +524,7 @@ const MaterialSelectionModal = ({
           <Button
             variant="contained"
             color="primary"
-            onClick={handleSubmit}
+            onClick={handleSubmitRequest}
             disabled={selectedMaterials.length === 0 || isHistorical}
           >
             Submit Request

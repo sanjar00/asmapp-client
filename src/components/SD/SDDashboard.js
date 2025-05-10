@@ -38,24 +38,48 @@ function SDDashboard() {
     fetchDistributors();
   }, []);
 
-  // Add the missing handleDownloadRequest function
   const handleDownloadRequest = async (selectedMaterials) => {
-    try {
-      if (!selectedDistributor || selectedMaterials.length === 0) {
-        return;
-      }
+    if (!selectedDistributor) return;
 
-      const materialIds = selectedMaterials.map(material => material.id);
-      
-      const response = await api.post(`/sd/distributors/${selectedDistributor.id}/request`, {
-        materialIds
-      });
-      
-      alert('Request submitted successfully!');
-      fetchDistributors(); // Refresh the list after submission
+    try {
+        // First lock the quantities
+        await api.post('/sd/lock', {
+            distributorId: selectedDistributor.id,
+            materials: selectedMaterials.map(mat => ({
+                materialId: mat.id,
+                quantity: mat.MaterialDistribution.distributedQuantity
+            }))
+        });
+
+        const requestData = {
+            distributorName: selectedDistributor.name,
+            distributorCode: selectedDistributor.code || 'Unknown',
+            asmCode: selectedDistributor.asmCode || 'Unknown',
+            materials: selectedMaterials.map((mat) => ({
+                name: mat.name,
+                code: mat.code,
+                quantity: mat.MaterialDistribution.distributedQuantity,
+            })),
+        };
+
+        const response = await api.post('/requests/generate-request', requestData, {
+            responseType: 'blob',
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Request_${selectedDistributor.name}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Refresh data after locking
+        await fetchMaterialsInfo(selectedDistributor.sdId);
+        fetchDistributors();
+        handleCloseModal();
     } catch (error) {
-      console.error('Error submitting request:', error);
-      setError('Failed to submit request. Please try again.');
+        console.error('Error generating document:', error);
     }
   };
 
