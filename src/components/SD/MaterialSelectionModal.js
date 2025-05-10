@@ -227,10 +227,12 @@ const MaterialSelectionModal = ({
   };
 
   const handleSubmit = () => {
-    // Get the full material objects for the selected IDs
-    const materialsToSubmit = localMaterials.filter((material) =>
-      selectedMaterials.includes(material.id)
+    // Get the full material objects for selected IDs
+    const materialsToSubmit = localMaterials.filter(mat => 
+      selectedMaterials.includes(mat.id)
     );
+    
+    // Call the onSubmit function passed from parent component
     onSubmit(materialsToSubmit);
     onClose();
   };
