@@ -84,14 +84,14 @@ function ManageMaterials() {
   // ---------------------------
   const handleDownloadDistribution = async () => {
     try {
-      // We assume your new endpoint is GET /sd/distribution-excel
-      const response = await api.get('/sd/distribution-excel', {
+      // Use the correct admin endpoint instead of SD endpoint
+      const response = await api.get('/admin/materials/distribution-excel', {
         responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'SD_Distribution.xlsx');
+      link.setAttribute('download', 'Materials_Distribution.xlsx');
       document.body.appendChild(link);
       link.click();
       link.remove();

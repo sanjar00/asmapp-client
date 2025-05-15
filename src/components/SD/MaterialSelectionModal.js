@@ -330,6 +330,12 @@ const MaterialSelectionModal = ({
     }
   };
 
+  // Add this new function to check if material is locked for any distributor
+  const isMaterialLockedForAnyDistributor = (material) => {
+    return material.RequestMaterials && 
+      material.RequestMaterials.some(rm => rm.locked);
+  };
+
   return (
     <Modal
       open={open}
@@ -422,6 +428,7 @@ const MaterialSelectionModal = ({
                   rm.Request.distributorId === distributorId
               );
 
+            const isLockedForAny = isMaterialLockedForAnyDistributor(material);
             const isEditing = editingMaterialId === material.id;
             
             // Get material quantities
@@ -431,7 +438,7 @@ const MaterialSelectionModal = ({
               <React.Fragment key={material.id}>
                 <ListItem
                   secondaryAction={
-                    isLocked || isHistorical ? null : isEditing ? (
+                    isLocked || isHistorical || isLockedForAny ? null : isEditing ? (
                       <>
                         <TextField
                           value={newQuantity}
@@ -475,7 +482,7 @@ const MaterialSelectionModal = ({
                       edge="start"
                       checked={selectedMaterials.includes(material.id)}
                       onChange={() => handleToggle(material.id)}
-                      disabled={isLocked || isHistorical}
+                      disabled={isLocked || isHistorical || isLockedForAny}
                     />
                   </ListItemIcon>
                   <ListItemText
@@ -493,9 +500,9 @@ const MaterialSelectionModal = ({
                         <Typography
                           component="span"
                           variant="body2"
-                          color={isLocked ? 'success.main' : 'text.primary'}
+                          color={isLocked || isLockedForAny ? 'success.main' : 'text.primary'}
                         >
-                          {isLocked
+                          {isLocked || isLockedForAny
                             ? 'Status: Locked (Already requested)'
                             : `Distributed Quantity: ${
                                 material.MaterialDistribution?.distributedQuantity || 0
