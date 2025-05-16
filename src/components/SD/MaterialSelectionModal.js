@@ -339,10 +339,19 @@ const MaterialSelectionModal = ({
   };
 
   // Move this function outside of handleSaveQuantity to make it accessible throughout the component
+  // Helper function to check if a material is locked for this distributor
   const isLockedForThisDistributor = (material) => {
     return material.RequestMaterials && 
       material.RequestMaterials.some(rm => 
         rm.locked && rm.Request && rm.Request.distributorId === distributorId
+      );
+  };
+
+  // New helper function to check if a material is downloaded in any distributor
+  const isDownloadedInAnyDistributor = (material) => {
+    return material.RequestMaterials && 
+      material.RequestMaterials.some(rm => 
+        rm.locked && rm.Request && rm.Request.distributorId !== distributorId
       );
   };
 
@@ -570,3 +579,74 @@ const MaterialSelectionModal = ({
 };
 
 export default MaterialSelectionModal;
+
+  // Update the renderMaterialItem function
+  const renderMaterialItem = (material) => {
+    const isLocked = isLockedForThisDistributor(material);
+    const isDownloadedElsewhere = isDownloadedInAnyDistributor(material);
+    const { available, current } = getAvailableQuantity(material);
+
+    return (
+      <ListItem key={material.id} divider>
+        <ListItemIcon>
+          <Checkbox
+            edge="start"
+            checked={selectedMaterials.includes(material.id)}
+            onChange={() => handleToggle(material.id)}
+            disabled={isLocked}
+          />
+        </ListItemIcon>
+        <ListItemText
+          primary={material.name}
+          secondary={
+            <>
+              <Typography variant="body2" component="span">
+                {material.code ? `Code: ${material.code}` : ''}
+                {material.channel ? ` | Channel: ${material.channel}` : ''}
+              </Typography>
+              <br />
+              <Typography
+                variant="body2"
+                component="span"
+                color={isLocked ? 'textSecondary' : 'textPrimary'}
+              >
+                Quantity: {material.MaterialDistribution?.distributedQuantity || 0}
+                {!isLocked && ` (Available: ${available})`}
+              </Typography>
+            </>
+          }
+        />
+
+        {editingMaterialId === material.id ? (
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <TextField
+              size="small"
+              value={newQuantity}
+              onChange={(e) => setNewQuantity(e.target.value)}
+              type="number"
+              error={!!errorText}
+              helperText={errorText}
+              sx={{ width: '100px', mr: 1 }}
+            />
+            <IconButton color="primary" onClick={() => handleSaveQuantity(material)}>
+              <Save />
+            </IconButton>
+            <IconButton onClick={handleCancelEditing}>
+              <Close />
+            </IconButton>
+          </Box>
+        ) : (
+          // Only show edit button if not locked and not downloaded elsewhere
+          !isLocked && !isDownloadedElsewhere && (
+            <IconButton
+              edge="end"
+              onClick={() => handleStartEditing(material)}
+              disabled={isLocked}
+            >
+              <Edit />
+            </IconButton>
+          )
+        )}
+      </ListItem>
+    );
+  };
