@@ -336,6 +336,19 @@ const MaterialSelectionModal = ({
       material.RequestMaterials.some(rm => rm.locked);
   };
 
+  // Update the isEditDisabled function to check if material is locked for any distributor of this SD
+  const isEditDisabled = (material) => {
+    // Check if this material is locked for any distributor belonging to this SD
+    const isLockedForAnyDistributorOfThisSD = 
+      material.RequestMaterials && 
+      material.RequestMaterials.some(rm => 
+        rm.locked && rm.Request && rm.Request.Distributor && 
+        rm.Request.Distributor.sdId === distributor?.sdId
+      );
+    
+    return isLockedForAnyDistributorOfThisSD;
+  };
+
   return (
     <Modal
       open={open}
@@ -468,12 +481,16 @@ const MaterialSelectionModal = ({
                         </IconButton>
                       </>
                     ) : (
-                      <IconButton
-                        edge="end"
-                        onClick={() => handleStartEditing(material)}
-                      >
-                        <Edit />
-                      </IconButton>
+                      !isLocked && (
+                        <IconButton 
+                          onClick={() => handleStartEditing(material)}
+                          disabled={isEditDisabled(material)}
+                          color="primary"
+                          size="small"
+                        >
+                          <Edit />
+                        </IconButton>
+                      )
                     )
                   }
                 >
