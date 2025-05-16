@@ -156,10 +156,12 @@ const MaterialSelectionModal = ({
     
     // Check if this material is locked for this distributor
     // Update the isLockedForThisDistributor check to be specific to the current distributor
-    const isLockedForThisDistributor = material.RequestMaterials && 
-    material.RequestMaterials.some(rm => 
-    rm.locked && rm.Request && rm.Request.distributorId === distributorId
-    );
+    const isLockedForThisDistributor = (material) => {
+      return material.RequestMaterials && 
+        material.RequestMaterials.some(rm => 
+          rm.locked && rm.Request && rm.Request.distributorId === distributorId
+        );
+    };
     
     // If locked for this distributor, don't allow changes
     if (isLockedForThisDistributor) {
@@ -500,7 +502,7 @@ const MaterialSelectionModal = ({
                       edge="start"
                       checked={selectedMaterials.includes(material.id)}
                       onChange={() => handleToggle(material.id)}
-                      disabled={isLockedForThisDistributor} // Only disable for this specific distributor
+                      disabled={isLocked || isHistorical || isLockedForThisDistributor(material)}
                     />
                   </ListItemIcon>
                   <ListItemText
