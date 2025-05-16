@@ -154,17 +154,16 @@ const MaterialSelectionModal = ({
     // Get current distributor quantity
     const currentDistributorQty = material.MaterialDistribution?.distributedQuantity || 0;
     
-    // Check if this material is locked for this distributor
-    // Update the isLockedForThisDistributor check to be specific to the current distributor
-    const isLockedForThisDistributor = (material) => {
-      return material.RequestMaterials && 
-        material.RequestMaterials.some(rm => 
-          rm.locked && rm.Request && rm.Request.distributorId === distributorId
-        );
-    };
+    // Remove this duplicate definition
+    // const isLockedForThisDistributor = (material) => {
+    //   return material.RequestMaterials && 
+    //     material.RequestMaterials.some(rm => 
+    //       rm.locked && rm.Request && rm.Request.distributorId === distributorId
+    //     );
+    // };
     
     // If locked for this distributor, don't allow changes
-    if (isLockedForThisDistributor) {
+    if (isLockedForThisDistributor(material)) {
       setErrorText('This material is locked and cannot be modified');
       return;
     }
@@ -337,6 +336,14 @@ const MaterialSelectionModal = ({
   const isMaterialLockedForAnyDistributor = (material) => {
     return material.RequestMaterials && 
       material.RequestMaterials.some(rm => rm.locked);
+  };
+
+  // Move this function outside of handleSaveQuantity to make it accessible throughout the component
+  const isLockedForThisDistributor = (material) => {
+    return material.RequestMaterials && 
+      material.RequestMaterials.some(rm => 
+        rm.locked && rm.Request && rm.Request.distributorId === distributorId
+      );
   };
 
   // Update the isEditDisabled function to check if material is locked for any distributor of this SD
