@@ -154,14 +154,6 @@ const MaterialSelectionModal = ({
     // Get current distributor quantity
     const currentDistributorQty = material.MaterialDistribution?.distributedQuantity || 0;
     
-    // Remove this duplicate definition
-    // const isLockedForThisDistributor = (material) => {
-    //   return material.RequestMaterials && 
-    //     material.RequestMaterials.some(rm => 
-    //       rm.locked && rm.Request && rm.Request.distributorId === distributorId
-    //     );
-    // };
-    
     // If locked for this distributor, don't allow changes
     if (isLockedForThisDistributor(material)) {
       setErrorText('This material is locked and cannot be modified');
@@ -169,8 +161,20 @@ const MaterialSelectionModal = ({
     }
     
     // Get available quantity info
-    const { available } = getAvailableQuantity(material);
+    const { available, total } = getAvailableQuantity(material);
     
+    // Calculate the total that would be used by all distributors if we apply this change
+    const totalUsedByAll = localDistributorsMaterialsSum[material.id] || 0;
+    const otherDistributorsUsage = totalUsedByAll - currentDistributorQty;
+    const newTotalUsage = otherDistributorsUsage + intValue;
+    
+    // Check if the new total usage would exceed the total allowed quantity
+    if (newTotalUsage > total) {
+      setErrorText(`Cannot exceed total allowed quantity of ${total}`);
+      return;
+    }
+    
+    // The original check is still useful for normal cases
     if (intValue > available) {
       setErrorText(`Cannot exceed available limit of ${available}`);
       return;
