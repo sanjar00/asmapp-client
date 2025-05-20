@@ -38,18 +38,22 @@ const MaterialSelectionModal = ({
   const [distributor, setDistributor] = useState(null);
   const [localTotalAllowedQuantities, setLocalTotalAllowedQuantities] = useState(totalAllowedQuantities);
   const [localDistributorsMaterialsSum, setLocalDistributorsMaterialsSum] = useState(distributorsMaterialsSum);
-  // Add this new state to track materials locally
   const [localMaterials, setLocalMaterials] = useState(materials);
-
-  // 0 = All, 1 = TT, 2 = OP
   const [selectedChannel, setSelectedChannel] = useState(0);
+
+  // New state to store the fixed total allowed quantities for the current modal session
+  const [sessionFixedTotalAllowedQuantities, setSessionFixedTotalAllowedQuantities] = useState(null);
 
   // Helper function to calculate available quantities for a material
   const getAvailableQuantity = (material) => {
-    // Get the total allowed quantity for this material
-    const materialTotal = localTotalAllowedQuantities[material.id]?.total || 0;
+    // Determine which total allowed quantities to use: session fixed or live local state
+    const capsToUse = sessionFixedTotalAllowedQuantities || localTotalAllowedQuantities;
+    
+    // Get the total allowed quantity for this material using the determined caps
+    const materialTotal = capsToUse[material.id]?.total || 0;
     
     // Get the locked quantity (already requested by distributors)
+    // Assuming locked_total comes from localTotalAllowedQuantities which is kept live
     const lockedTotal = localTotalAllowedQuantities[material.id]?.locked_total || 0;
     
     // Get current distributor quantity
@@ -59,28 +63,44 @@ const MaterialSelectionModal = ({
     const totalUsedByAll = localDistributorsMaterialsSum[material.id] || 0;
     const usedByOthers = totalUsedByAll - currentDistributorQty;
     
-    // Maximum this distributor can set
+    // Maximum this distributor can set, based on the materialTotal (which is now session-fixed if available)
     const maxUserCanSet = materialTotal - lockedTotal - usedByOthers;
     
     return {
-      total: materialTotal,
-      available: maxUserCanSet,
+      total: materialTotal, // This will reflect the fixed cap for the session if available
+      available: maxUserCanSet < 0 ? 0 : maxUserCanSet, // Ensure available is not negative
       current: currentDistributorQty
     };
   };
 
   useEffect(() => {
-    setSelectedMaterials([]);
-    setSelectedChannel(0);
-    setLocalMaterials(materials);
-    
-    // Get distributor details to check if it's historical
-    if (distributorId) {
-      fetchDistributorDetails();
-    }
-  }, [materials, distributorId]); // Remove fetchDistributorDetails from the dependency array
+    // Effect to manage modal state based on 'open' status and initial data
+    if (open) {
+      setSelectedMaterials([]);
+      setSelectedChannel(0);
+      setLocalMaterials(materials); // Update local copy of materials
 
-  // Update local state when props change
+      // Capture the initial totalAllowedQuantities when modal opens for the first time in a session,
+      // and if they haven't been captured yet for this session.
+      if (!sessionFixedTotalAllowedQuantities && Object.keys(totalAllowedQuantities).length > 0) {
+        setSessionFixedTotalAllowedQuantities(JSON.parse(JSON.stringify(totalAllowedQuantities)));
+      }
+      
+      if (distributorId) {
+        fetchDistributorDetails();
+      }
+    } else {
+      // Reset states when modal closes
+      setSessionFixedTotalAllowedQuantities(null); // Reset the session-fixed caps
+      setEditingMaterialId(null);
+      setNewQuantity('');
+      setErrorText('');
+      // Consider resetting distributor state if necessary: setDistributor(null);
+    }
+  }, [open, materials, distributorId, totalAllowedQuantities]); // Added totalAllowedQuantities
+
+  // Effect to keep localTotalAllowedQuantities and localDistributorsMaterialsSum in sync with props
+  // These are used for live display aspects if not overridden by sessionFixedTotalAllowedQuantities
   useEffect(() => {
     setLocalTotalAllowedQuantities(totalAllowedQuantities);
     setLocalDistributorsMaterialsSum(distributorsMaterialsSum);
@@ -146,37 +166,40 @@ const MaterialSelectionModal = ({
 
   const handleSaveQuantity = async (material) => {
     const intValue = parseInt(newQuantity, 10);
-    if (!intValue || intValue < 1) {
-      setErrorText('Quantity must be a positive number');
+    if (isNaN(intValue) || intValue < 0) { // Allow 0 for quantity to remove distribution
+      setErrorText('Quantity must be a non-negative number.');
       return;
     }
+    if (newQuantity.trim() === '') { // Handle empty input specifically if needed
+        setErrorText('Quantity cannot be empty.');
+        return;
+    }
   
-    // Get current distributor quantity
     const currentDistributorQty = material.MaterialDistribution?.distributedQuantity || 0;
     
-    // If locked for this distributor, don't allow changes
     if (isLockedForThisDistributor(material)) {
       setErrorText('This material is locked and cannot be modified');
       return;
     }
     
-    // Get available quantity info
-    const { available, total } = getAvailableQuantity(material);
+    // getAvailableQuantity now uses sessionFixedTotalAllowedQuantities if available
+    const { available, total: effectiveTotalCap } = getAvailableQuantity(material);
     
-    // Calculate the total that would be used by all distributors if we apply this change
     const totalUsedByAll = localDistributorsMaterialsSum[material.id] || 0;
     const otherDistributorsUsage = totalUsedByAll - currentDistributorQty;
     const newTotalUsage = otherDistributorsUsage + intValue;
     
-    // Check if the new total usage would exceed the total allowed quantity
-    if (newTotalUsage > total) {
-      setErrorText(`Cannot exceed total allowed quantity of ${total}`);
+    // Check if the new total usage would exceed the effective total cap for the session
+    if (newTotalUsage > effectiveTotalCap) {
+      setErrorText(`Cannot exceed total allowed quantity of ${effectiveTotalCap}`);
       return;
     }
     
-    // The original check is still useful for normal cases
-    if (intValue > available) {
-      setErrorText(`Cannot exceed available limit of ${available}`);
+    // This check uses 'available' which is also calculated based on effectiveTotalCap
+    // This check is particularly for when intValue itself is more than what's available for this user to set.
+    // (e.g. if user sets 50, but only 30 is available for them even if total usage is within cap)
+    if (intValue > available && intValue > currentDistributorQty) { // Check only if increasing quantity
+      setErrorText(`Cannot exceed available limit of ${available} for this distributor.`);
       return;
     }
 
@@ -571,10 +594,10 @@ const MaterialSelectionModal = ({
           <Button
             variant="contained"
             color="primary"
-            onClick={handleSubmitRequest}
+            onClick={handleSubmitRequest} // Changed from handleSubmit to handleSubmitRequest
             disabled={selectedMaterials.length === 0 || isHistorical}
           >
-            Submit Request
+            Submit Request 
           </Button>
         </Box>
       </Box>
@@ -583,5 +606,3 @@ const MaterialSelectionModal = ({
 };
 
 export default MaterialSelectionModal;
-
-  
