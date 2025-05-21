@@ -344,102 +344,23 @@ const MaterialSelectionModal = ({
   const isHistorical = distributor?.isHistorical || false;
 
   // Add this new function to download the request
-  const handleDownloadRequest = async () => {
-    if (selectedMaterials.length === 0) {
-      setErrorText('Please select at least one material');
-      return;
-    }
-
-    // Get the selected material objects
-    const selectedMaterialObjects = localMaterials.filter(mat => 
-      selectedMaterials.includes(mat.id)
-    );
-
-    // Sort materials: first with accessories, then without
-    const sortedMaterials = [...selectedMaterialObjects].sort((a, b) => {
-      const aHasAccessories = a.accessories && a.accessories.length > 0;
-      const bHasAccessories = b.accessories && b.accessories.length > 0;
-      
-      if (aHasAccessories && !bHasAccessories) return -1;
-      if (!aHasAccessories && bHasAccessories) return 1;
-      return 0;
-    });
-
-    // Split materials into chunks of 20 (considering accessories)
-    const materialChunks = [];
-    let currentChunk = [];
-    let currentRowCount = 0;
-    
-    for (const material of sortedMaterials) {
-      // Count how many rows this material will take (material + accessories)
-      const accessoriesCount = material.accessories?.length || 0;
-      const rowsNeeded = 1 + accessoriesCount;
-      
-      // If adding this material would exceed 20 rows, start a new chunk
-      if (currentRowCount + rowsNeeded > 20) {
-        materialChunks.push(currentChunk);
-        currentChunk = [material];
-        currentRowCount = rowsNeeded;
-      } else {
-        currentChunk.push(material);
-        currentRowCount += rowsNeeded;
-      }
-    }
-    
-    // Add the last chunk if it has materials
-    if (currentChunk.length > 0) {
-      materialChunks.push(currentChunk);
-    }
-
+  const handleDownloadRequest = async (requestId) => {
     try {
-      // Lock the quantities first
-      await api.post('/sd/lock', {
-        distributorId,
-        materials: selectedMaterialObjects.map(mat => ({
-          materialId: mat.id, // Using material ID instead of code
-          quantity: mat.MaterialDistribution.distributedQuantity
-        }))
+      const response = await api.get(`/sd/requests/${requestId}/download`, {
+        responseType: 'blob',
       });
-
-      // Generate and download request files for each chunk
-      for (let i = 0; i < materialChunks.length; i++) {
-        const chunk = materialChunks[i];
-        const requestData = {
-          distributorId, // Send the distributor ID
-          distributorName: distributor?.name || 'Unknown',
-          distributorCode: distributor?.code || 'Unknown',
-          asmCode: distributor?.asmCode || 'Unknown',
-          materials: chunk.map((mat) => ({
-            id: mat.id, // Include material ID
-            name: mat.name,
-            code: mat.code,
-            quantity: mat.MaterialDistribution.distributedQuantity,
-            accessories: mat.accessories || []
-          })),
-        };
-
-        const response = await api.post('/requests/generate-request', requestData, {
-          responseType: 'blob',
-        });
-
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        const fileName = materialChunks.length > 1 
-          ? `Request_${distributor?.name || 'Unknown'}_Part${i+1}.xlsx`
-          : `Request_${distributor?.name || 'Unknown'}.xlsx`;
-        link.setAttribute('download', fileName);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-
-      // Refresh data after locking
-      await refreshDistributors();
-      onClose();
+  
+      // Create a link to download the file
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `Request_${requestId}.xlsx`;
+      link.click();
     } catch (error) {
-      console.error('Error generating document:', error);
-      setErrorText('Failed to generate request document');
+      console.error('Error downloading request:', error);
+      setErrorText('Failed to download request. Please try again.');
     }
   };
 
