@@ -197,12 +197,17 @@ const MaterialSelectionModal = ({
     
     // This check uses 'available' which is also calculated based on effectiveTotalCap
     // This check is particularly for when intValue itself is more than what's available for this user to set.
-    // (e.g. if user sets 50, but only 30 is available for them even if total usage is within cap)
-    if (intValue > available && intValue > currentDistributorQty) { // Check only if increasing quantity
-      setErrorText(`Cannot exceed available limit of ${available} for this distributor.`);
+    if (intValue > currentDistributorQty + available) {
+      setErrorText(`Cannot exceed available quantity of ${currentDistributorQty + available}`);
       return;
     }
-
+    
+    // Always enforce the total cap as a hard limit, regardless of what the user previously had
+    if (intValue > effectiveTotalCap) {
+      setErrorText(`Cannot exceed the maximum allowed quantity of ${effectiveTotalCap}`);
+      return;
+    }
+    
     try {
       setErrorText('');
       await api.patch('/sd/distribute', {
