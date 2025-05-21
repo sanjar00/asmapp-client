@@ -56,6 +56,7 @@ function SDDashboard() {
             distributorCode: selectedDistributor.code || 'Unknown',
             asmCode: selectedDistributor.asmCode || 'Unknown',
             materials: selectedMaterials.map((mat) => ({
+                id: mat.id, // Add material ID to ensure the exact material is used
                 name: mat.name,
                 code: mat.code,
                 quantity: mat.MaterialDistribution.distributedQuantity,
