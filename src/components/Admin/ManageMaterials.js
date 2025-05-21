@@ -592,19 +592,3 @@ function ManageMaterials() {
 }
 
 export default ManageMaterials;
-
-// REMOVE THIS FUNCTION - it's defined outside the component scope
-// const handleEditMaterial = (mainItem) => {
-//   setEditingMain(mainItem);
-//   setMainName(mainItem.name);
-//   setMainCode(mainItem.code);
-//   setMainChannel(mainItem.channel);
-//   setMainQuantity(mainItem.quantity);
-//   setIsHistorical(mainItem.isHistorical || false); // Set historical value
-//   setMaterialType('single');
-//   
-//   // Scroll to form
-//   if (formRef && formRef.current) {
-//     formRef.current.scrollIntoView({ behavior: 'smooth' });
-//   }
-// };
