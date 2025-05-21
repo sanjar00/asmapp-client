@@ -52,11 +52,12 @@ function SDDashboard() {
         });
 
         const requestData = {
+            distributorId: selectedDistributor.id, // Add this line to include distributorId
             distributorName: selectedDistributor.name,
             distributorCode: selectedDistributor.code || 'Unknown',
             asmCode: selectedDistributor.asmCode || 'Unknown',
             materials: selectedMaterials.map((mat) => ({
-                id: mat.id, // Add material ID to ensure the exact material is used
+                id: mat.id,
                 name: mat.name,
                 code: mat.code,
                 quantity: mat.MaterialDistribution.distributedQuantity,
