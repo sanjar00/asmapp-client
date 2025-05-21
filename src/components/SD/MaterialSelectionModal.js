@@ -344,18 +344,24 @@ const MaterialSelectionModal = ({
   const isHistorical = distributor?.isHistorical || false;
 
   // Add this new function to download the request
-  const handleDownloadRequest = async () => {
-    if (selectedMaterials.length === 0) {
-      setErrorText('Please select at least one material');
-      return;
+  const handleDownloadRequest = async (requestId) => {
+    try {
+      const response = await api.get(`/sd/requests/${requestId}/download`, {
+        responseType: 'blob',
+      });
+  
+      // Create a link to download the file
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `Request_${requestId}.xlsx`;
+      link.click();
+    } catch (error) {
+      console.error('Error downloading request:', error);
+      setErrorText('Failed to download request. Please try again.');
     }
-
-    // Get the actual material objects for the selected IDs
-    const materialsToDownload = localMaterials.filter(mat => 
-      selectedMaterials.includes(mat.id)
-    );
-
-    onSubmit(materialsToDownload);
   };
 
   // Add this new function to check if material is locked for any distributor
