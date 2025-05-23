@@ -372,12 +372,19 @@ const MaterialSelectionModal = ({
 
   // Move this function outside of handleSaveQuantity to make it accessible throughout the component
   // Helper function to check if a material is locked for this distributor
-  const isLockedForThisDistributor = (material) => {
-    return material.RequestMaterials && 
-      material.RequestMaterials.some(rm => 
-        rm.locked && rm.Request && rm.Request.distributorId === distributorId
-      );
-  };
+  // Helper to check if a material is locked for this distributor
+const isLockedForThisDistributor = (material) => {
+  // Check if there is a locked RequestMaterial for this material and this distributor
+  return (
+    material.RequestMaterials &&
+    material.RequestMaterials.some(
+      (rm) =>
+        rm.locked &&
+        rm.Request &&
+        rm.Request.distributorId === distributorId // Only lock for this distributor
+    )
+  );
+};
 
   // New helper function to check if a material is downloaded in any distributor
   const isDownloadedInAnyDistributor = (material) => {

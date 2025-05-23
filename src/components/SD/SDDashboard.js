@@ -145,7 +145,7 @@ function SDDashboard() {
       mat.RequestMaterials.some(rm => 
         rm.locked && 
         rm.Request && 
-        rm.Request.distributorId === distributor.id
+        rm.Request.distributorId === distributor.id // Only count locks for this distributor
       )
     ).length;
     
